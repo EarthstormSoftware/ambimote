@@ -24,7 +24,8 @@ a few kilobytes per frame reach the CPU.
 ```powershell
 ambimote list                       # Mote hosts plugged in, with serial numbers
 ambimote identify                   # light each stick in turn to see which host and channel it is
-ambimote fill ff8000 --brightness 0.2
+ambimote fill ff8000 --brightness 0.2 # also names (warm, red, ...) and temperatures (3000k); stays lit
+ambimote effect rainbow             # also breathe, candle and chase; runs until Ctrl+C
 ambimote off
 ambimote monitors                   # monitors attached to the desktop
 ambimote snapshot screen.bmp        # save the small image AmbiMote samples from, and print the edge colours

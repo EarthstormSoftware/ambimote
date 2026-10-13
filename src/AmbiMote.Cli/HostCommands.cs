@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Text.Json;
 
 using AmbiMote.Core;
+using AmbiMote.Core.Lighting;
 using AmbiMote.Core.Mote;
 
 namespace AmbiMote.Cli;
@@ -9,6 +10,12 @@ namespace AmbiMote.Cli;
 /// <summary>Commands that talk to Mote hosts directly: finding them, identifying sticks and test colours.</summary>
 internal static class HostCommands
 {
+    internal const string ColourHelp =
+        "A colour name (red, orange, yellow, green, cyan, blue, purple, magenta, pink, white, candle, warm, neutral, daylight), "
+        + "a colour temperature such as 3000k, or hex such as ff8000.";
+
+    internal const string ColourError = "Unknown colour. Use a name such as warm or red, a temperature such as 3000k, or hex such as ff8000.";
+
     private static readonly Rgb[] s_channelColours =
     [
         new(255, 0, 0),
@@ -121,13 +128,13 @@ internal static class HostCommands
 
     public static Command CreateFillCommand()
     {
-        var colour = new Argument<string>("colour") { Description = "Hex colour, such as ff8000." };
+        var colour = new Argument<string>("colour") { Description = ColourHelp };
         var channel = new Option<int?>("--channel", "-c") { Description = "Only fill this channel (1-4)." };
         colour.Validators.Add(static result =>
         {
-            if (!Rgb.TryParse(result.GetValueOrDefault<string>(), out _))
+            if (!Colours.TryParse(result.GetValueOrDefault<string>(), out _))
             {
-                result.AddError("Colour must be six hex digits, such as ff8000.");
+                result.AddError(ColourError);
             }
         });
         channel.Validators.Add(static result =>
@@ -143,7 +150,7 @@ internal static class HostCommands
         };
         command.SetAction((parseResult, cancellationToken) => RunOnHosts(parseResult, cancellationToken, (hosts, _) =>
         {
-            Rgb.TryParse(parseResult.GetValue(colour), out var rgb);
+            Colours.TryParse(parseResult.GetValue(colour), out var rgb);
             int? onlyChannel = parseResult.GetValue(channel);
             foreach (var (_, host) in hosts)
             {

@@ -16,6 +16,42 @@ public readonly record struct Rgb(byte R, byte G, byte B)
         return new Rgb(ScaleComponent(R, factor), ScaleComponent(G, factor), ScaleComponent(B, factor));
     }
 
+    /// <summary>A colour from hue (0 to 1, wrapping), saturation and value (0 to 1).</summary>
+    public static Rgb FromHsv(double hue, double saturation = 1.0, double value = 1.0)
+    {
+        hue = (hue - Math.Floor(hue)) * 6;
+        saturation = Math.Clamp(saturation, 0.0, 1.0);
+        value = Math.Clamp(value, 0.0, 1.0);
+        int sector = (int)hue % 6;
+        double f = hue - Math.Floor(hue);
+        double p = value * (1 - saturation);
+        double q = value * (1 - (saturation * f));
+        double t = value * (1 - (saturation * (1 - f)));
+        var (r, g, b) = sector switch
+        {
+            0 => (value, t, p),
+            1 => (q, value, p),
+            2 => (p, value, t),
+            3 => (p, q, value),
+            4 => (t, p, value),
+            _ => (value, p, q),
+        };
+        return new Rgb(ToByte(r), ToByte(g), ToByte(b));
+    }
+
+    /// <summary>
+    /// The colour of white light at a colour temperature, such as 2700 K for a warm bulb or 6500 K for daylight.
+    /// Uses Tanner Helland's fit of the black-body curve, which is close enough for lighting.
+    /// </summary>
+    public static Rgb FromKelvin(double kelvin)
+    {
+        double t = Math.Clamp(kelvin, 1000, 40000) / 100;
+        double r = t <= 66 ? 255 : 329.698727446 * Math.Pow(t - 60, -0.1332047592);
+        double g = t <= 66 ? (99.4708025861 * Math.Log(t)) - 161.1195681661 : 288.1221695283 * Math.Pow(t - 60, -0.0755148492);
+        double b = t >= 66 ? 255 : t <= 19 ? 0 : (138.5177312231 * Math.Log(t - 10)) - 305.0447927307;
+        return new Rgb(ClampByte(r), ClampByte(g), ClampByte(b));
+    }
+
     /// <summary>Parses a hex colour such as <c>ff8000</c> or <c>#FF8000</c>.</summary>
     public static bool TryParse(string? text, out Rgb colour)
     {
@@ -44,4 +80,8 @@ public readonly record struct Rgb(byte R, byte G, byte B)
     public override string ToString() => $"#{R:x2}{G:x2}{B:x2}";
 
     private static byte ScaleComponent(byte value, double factor) => (byte)Math.Round(value * factor);
+
+    private static byte ToByte(double fraction) => (byte)Math.Round(fraction * 255);
+
+    private static byte ClampByte(double value) => (byte)Math.Round(Math.Clamp(value, 0, 255));
 }

@@ -1,13 +1,19 @@
 // ambimote: command-line tool for AmbiMote.
 using System.CommandLine;
+using System.Globalization;
 
 using AmbiMote.Cli;
+
+// Numbers on the command line and in the output use a decimal point (0.25) whatever the Windows locale,
+// so scripts and the documentation work everywhere.
+CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
 var root = new RootCommand("Ambient lighting behind your monitors with Pimoroni Mote sticks.");
 root.Subcommands.Add(HostCommands.CreateListCommand());
 root.Subcommands.Add(HostCommands.CreateIdentifyCommand());
 root.Subcommands.Add(HostCommands.CreateFillCommand());
 root.Subcommands.Add(HostCommands.CreateOffCommand());
+root.Subcommands.Add(LightCommands.CreateEffectCommand());
 root.Subcommands.Add(CaptureCommands.CreateMonitorsCommand());
 root.Subcommands.Add(CaptureCommands.CreateSnapshotCommand());
 root.Subcommands.Add(CaptureCommands.CreateRunCommand());
