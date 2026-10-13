@@ -56,8 +56,9 @@ Example for three monitors with eight sticks across two hosts:
 
 ## Open questions
 
-- Do Mote hosts report a USB serial number? If not, hosts need telling apart by USB port
-  location, or by `ambimote identify` and saving the result.
+- Mote hosts do not report a USB serial number, so Windows gives them an instance ID based on
+  the USB port they are plugged into. Plan: match hosts by that ID (stable while each host stays
+  in the same port), and fall back to flashing the hosts and asking which is which, saving the answer.
 - The real current draw of a Mote host, to set a better default power limit.
 - Protected video (DRM) captures as black; decide whether to hold the last colours or fade out.
 - HDR desktops need tone-mapping before sampling.

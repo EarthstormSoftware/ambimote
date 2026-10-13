@@ -10,7 +10,14 @@ public sealed class SerialMoteTransport : IMoteTransport
     public SerialMoteTransport(string portName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(portName);
-        _port = new SerialPort(portName, MoteProtocol.BaudRate) { WriteTimeout = 1000 };
+        // pyserial, which Pimoroni's library uses, raises DTR and RTS on open. .NET does not by
+        // default, and USB serial devices often ignore data until DTR is raised.
+        _port = new SerialPort(portName, MoteProtocol.BaudRate)
+        {
+            WriteTimeout = 1000,
+            DtrEnable = true,
+            RtsEnable = true,
+        };
         _port.Open();
     }
 
