@@ -18,6 +18,9 @@ public sealed class MoteHost(IMoteTransport transport) : IDisposable
     /// <summary>The most current the sticks may draw, in milliamps; null for no limit. See <see cref="PowerLimit"/>.</summary>
     public double? MaxMilliamps { get; set; } = DefaultMaxMilliamps;
 
+    /// <summary>False once the host has been unplugged.</summary>
+    public bool IsOpen => _transport.IsOpen;
+
     public static MoteHost Open(string portName) => new(new SerialMoteTransport(portName));
 
     /// <summary>Configures a channel and clears its pixels.</summary>

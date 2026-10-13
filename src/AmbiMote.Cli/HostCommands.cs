@@ -17,33 +17,33 @@ internal static class HostCommands
         new(255, 160, 0),
     ];
 
-    private static readonly Option<string[]> s_port = new("--port", "-p")
+    internal static readonly Option<string[]> PortOption = new("--port", "-p")
     {
         Description = "Only use the Mote host on this serial port, such as COM5. Repeat for several. Default: every Mote host.",
         AllowMultipleArgumentsPerToken = true,
     };
 
-    private static readonly Option<double> s_brightness = new("--brightness", "-b")
+    internal static readonly Option<double> BrightnessOption = new("--brightness", "-b")
     {
         Description = "Brightness from 0 to 1.",
         DefaultValueFactory = _ => 0.25,
     };
 
-    private static readonly Option<double?> s_maxCurrent = new("--max-current")
+    internal static readonly Option<double?> MaxCurrentOption = new("--max-current")
     {
         Description = $"Most current the sticks on one host may draw, in mA (estimated). Default: {MoteHost.DefaultMaxMilliamps}.",
     };
 
     static HostCommands()
     {
-        s_brightness.Validators.Add(static result =>
+        BrightnessOption.Validators.Add(static result =>
         {
             if (result.GetValueOrDefault<double>() is < 0 or > 1)
             {
                 result.AddError("--brightness must be between 0 and 1.");
             }
         });
-        s_maxCurrent.Validators.Add(static result =>
+        MaxCurrentOption.Validators.Add(static result =>
         {
             if (result.GetValueOrDefault<double?>() is <= 0)
             {
@@ -91,7 +91,7 @@ internal static class HostCommands
             "identify",
             "Light each stick in turn so you can see which host and channel it is on. Pixel 0 is white; the rest fade out along the stick.")
         {
-            s_port, s_brightness, s_maxCurrent, delay,
+            PortOption, BrightnessOption, MaxCurrentOption, delay,
         };
         command.SetAction((parseResult, cancellationToken) => RunOnHosts(parseResult, cancellationToken, async (hosts, token) =>
         {
@@ -139,7 +139,7 @@ internal static class HostCommands
         });
         var command = new Command("fill", "Set the sticks to one colour. They stay lit after the command exits.")
         {
-            colour, s_port, s_brightness, s_maxCurrent, channel,
+            colour, PortOption, BrightnessOption, MaxCurrentOption, channel,
         };
         command.SetAction((parseResult, cancellationToken) => RunOnHosts(parseResult, cancellationToken, (hosts, _) =>
         {
@@ -166,7 +166,7 @@ internal static class HostCommands
 
     public static Command CreateOffCommand()
     {
-        var command = new Command("off", "Turn the sticks off.") { s_port };
+        var command = new Command("off", "Turn the sticks off.") { PortOption };
         command.SetAction((parseResult, cancellationToken) =>
             RunOnHosts(parseResult, cancellationToken, static (_, _) => Task.FromResult(ExitCodes.Success)));
         return command;
@@ -176,14 +176,14 @@ internal static class HostCommands
     /// Opens the selected hosts with all four channels configured as sticks, runs <paramref name="action"/>,
     /// and turns the sticks off afterwards (also on Ctrl+C) unless <paramref name="turnOffAfter"/> is false.
     /// </summary>
-    private static async Task<int> RunOnHosts(
+    internal static async Task<int> RunOnHosts(
         ParseResult parseResult,
         CancellationToken cancellationToken,
         Func<IReadOnlyList<(MoteDeviceInfo Info, MoteHost Host)>, CancellationToken, Task<int>> action,
         bool turnOffAfter = true)
     {
         var found = MoteDiscovery.FindHosts();
-        string[] ports = parseResult.GetValue(s_port) ?? [];
+        string[] ports = parseResult.GetValue(PortOption) ?? [];
         var selected = ports.Length == 0
             ? found
             : found.Where(h => ports.Contains(h.PortName, StringComparer.OrdinalIgnoreCase)).ToList();
@@ -202,8 +202,8 @@ internal static class HostCommands
             {
                 var host = MoteHost.Open(info.PortName);
                 hosts.Add((info, host));
-                host.Brightness = parseResult.GetValue(s_brightness);
-                host.MaxMilliamps = parseResult.GetValue(s_maxCurrent) ?? MoteHost.DefaultMaxMilliamps;
+                host.Brightness = parseResult.GetValue(BrightnessOption);
+                host.MaxMilliamps = parseResult.GetValue(MaxCurrentOption) ?? MoteHost.DefaultMaxMilliamps;
                 host.ConfigureSticks();
             }
 
@@ -216,6 +216,12 @@ internal static class HostCommands
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or TimeoutException)
         {
             Console.Error.WriteLine($"Could not talk to the Mote host: {ex.Message}");
+            return ExitCodes.Error;
+        }
+        catch (InvalidOperationException) when (hosts.Any(static h => !h.Host.IsOpen))
+        {
+            // SerialPort closes itself when the USB device goes away.
+            Console.Error.WriteLine("The Mote host was disconnected.");
             return ExitCodes.Error;
         }
         finally

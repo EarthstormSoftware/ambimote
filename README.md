@@ -4,8 +4,8 @@ Ambient lighting for PC monitors, in the style of Philips Ambilight, using
 [Pimoroni Mote](https://shop.pimoroni.com/products/mote) LED sticks. AmbiMote reads the colours
 at the edges of each screen and lights the wall behind the monitors to match.
 
-> **Status:** early development. The `ambimote` CLI can find Mote hosts and drive their sticks;
-> screen capture is next. See the [roadmap](docs/roadmap.md).
+> **Status:** early development. The `ambimote` CLI can drive Mote sticks and light one stick
+> from one edge of a monitor; mapping all sticks and a lamp mode are next. See the [roadmap](docs/roadmap.md).
 
 ## How it works
 
@@ -26,6 +26,9 @@ ambimote list                       # Mote hosts plugged in, with serial numbers
 ambimote identify                   # light each stick in turn to see which host and channel it is
 ambimote fill ff8000 --brightness 0.2
 ambimote off
+ambimote monitors                   # monitors attached to the desktop
+ambimote snapshot screen.bmp        # save the small image AmbiMote samples from, and print the edge colours
+ambimote run --edge top --channel 1 # light one stick from the top edge of the primary monitor until Ctrl+C
 ```
 
 Exit codes: `0` success, `1` error, `2` invalid arguments, `3` no Mote host found.

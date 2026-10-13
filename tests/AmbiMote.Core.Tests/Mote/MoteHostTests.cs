@@ -8,11 +8,24 @@ public class MoteHostTests
     {
         public List<byte[]> Writes { get; } = [];
 
+        public bool IsOpen { get; set; } = true;
+
         public bool Disposed { get; private set; }
 
         public void Write(ReadOnlySpan<byte> data) => Writes.Add(data.ToArray());
 
         public void Dispose() => Disposed = true;
+    }
+
+    [Fact]
+    public void IsOpen_FollowsTheTransport()
+    {
+        var transport = new RecordingTransport();
+        using var host = new MoteHost(transport);
+
+        Assert.True(host.IsOpen);
+        transport.IsOpen = false;
+        Assert.False(host.IsOpen);
     }
 
     [Fact]

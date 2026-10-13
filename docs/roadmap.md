@@ -4,15 +4,18 @@
 
 1. **Mote output** *(done)*: serial protocol, host discovery by USB ID, power limit,
    and the `ambimote list`, `identify`, `fill` and `off` commands.
-2. **Capture one monitor**: Desktop Duplication through Vortice.Windows, downscale on the GPU,
-   read back a small texture, sample one edge and drive one stick.
-3. **All monitors and sticks**: per-monitor capture, the stick mapping config, smoothing,
+2. **Capture one monitor** *(done)*: Desktop Duplication through Vortice.Windows, downscale on the GPU,
+   read back a small texture, sample one edge and drive one stick (`ambimote run`, `snapshot`, `monitors`).
+3. **Stick mapping and lamp mode**: record where each stick is mounted and which way round, then
+   use the sticks as ordinary lights, like Pimoroni Plasma: any colour, plus an effect or two
+   (a chase around the monitors in order, which also checks the mapping, and a rainbow).
+4. **All monitors and sticks**: per-monitor capture driven by the stick mapping, smoothing,
    gamma and white balance.
-4. **Measure while gaming**: CPU use and frame times with AmbiMote on and off (PresentMon or the
+5. **Measure while gaming**: CPU use and frame times with AmbiMote on and off (PresentMon or the
    GPU vendor's overlay).
-5. **Desktop app**: tray icon, settings, identify mode, start with Windows, turn off when the PC
-   locks or the monitors sleep.
-6. **Optional**: MQTT control (on/off, brightness, mode) for Home Assistant.
+6. **Desktop app**: tray icon, settings, identify mode, start with Windows, turn off when the PC
+   locks or the monitors sleep, reconnect when a Mote host is unplugged and plugged back in.
+7. **Optional**: MQTT control (on/off, brightness, mode) for Home Assistant.
 
 ## Stick mapping (step 3)
 
@@ -61,4 +64,6 @@ Example for three monitors with eight sticks across two hosts:
   in the same port), and fall back to flashing the hosts and asking which is which, saving the answer.
 - The real current draw of a Mote host, to set a better default power limit.
 - Protected video (DRM) captures as black; decide whether to hold the last colours or fade out.
-- HDR desktops need tone-mapping before sampling.
+- HDR: Desktop Duplication (`DuplicateOutput`) hands over 8-bit frames that Windows has already
+  converted to SDR, so the desktop looks right, but HDR highlights in games are clipped. If that
+  matters, `DuplicateOutput1` can capture FP16 scRGB to tone-map ourselves.

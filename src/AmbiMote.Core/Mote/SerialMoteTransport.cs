@@ -23,6 +23,8 @@ public sealed class SerialMoteTransport : IMoteTransport
 
     public string PortName => _port.PortName;
 
+    public bool IsOpen => _port.IsOpen;
+
     public void Write(ReadOnlySpan<byte> data) => _port.BaseStream.Write(data);
 
     public void Dispose() => _port.Dispose();

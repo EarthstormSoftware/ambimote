@@ -8,6 +8,9 @@ root.Subcommands.Add(HostCommands.CreateListCommand());
 root.Subcommands.Add(HostCommands.CreateIdentifyCommand());
 root.Subcommands.Add(HostCommands.CreateFillCommand());
 root.Subcommands.Add(HostCommands.CreateOffCommand());
+root.Subcommands.Add(CaptureCommands.CreateMonitorsCommand());
+root.Subcommands.Add(CaptureCommands.CreateSnapshotCommand());
+root.Subcommands.Add(CaptureCommands.CreateRunCommand());
 
 var parseResult = root.Parse(args);
 int exitCode = await parseResult.InvokeAsync();
