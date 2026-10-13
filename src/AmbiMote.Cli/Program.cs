@@ -14,6 +14,7 @@ root.Subcommands.Add(HostCommands.CreateIdentifyCommand());
 root.Subcommands.Add(HostCommands.CreateFillCommand());
 root.Subcommands.Add(HostCommands.CreateOffCommand());
 root.Subcommands.Add(LightCommands.CreateEffectCommand());
+root.Subcommands.Add(ConfigCommands.CreateConfigCommand());
 root.Subcommands.Add(CaptureCommands.CreateMonitorsCommand());
 root.Subcommands.Add(CaptureCommands.CreateSnapshotCommand());
 root.Subcommands.Add(CaptureCommands.CreateRunCommand());

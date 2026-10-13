@@ -26,6 +26,7 @@ ambimote list                       # Mote hosts plugged in, with serial numbers
 ambimote identify                   # light each stick in turn to see which host and channel it is
 ambimote fill ff8000 --brightness 0.2 # also names (warm, red, ...) and temperatures (3000k); stays lit
 ambimote effect rainbow             # also breathe, candle and chase; runs until Ctrl+C
+ambimote config                     # check where each stick is mounted (see Setup below)
 ambimote off
 ambimote monitors                   # monitors attached to the desktop
 ambimote snapshot screen.bmp        # save the small image AmbiMote samples from, and print the edge colours
@@ -33,6 +34,16 @@ ambimote run --edge top --channel 1 # light one stick from the top edge of the p
 ```
 
 Exit codes: `0` success, `1` error, `2` invalid arguments, `3` no Mote host found.
+
+## Setup
+
+Copy [config.example.json](config.example.json) to `%APPDATA%\AmbiMote\config.json` and fill in
+where each stick is mounted: which host and channel, which monitor edge, and which way it runs
+(`from` is where the first LED is, `to` where the last one is). `ambimote list` gives the host
+instance IDs and `ambimote monitors` the monitor names; `ambimote effect chase` checks the result.
+
+Mote hosts have no USB serial number, so AmbiMote tells them apart by the USB port they are
+plugged into. Keep each host in the same port.
 
 ## Power
 

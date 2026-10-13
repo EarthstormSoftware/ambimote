@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Diagnostics;
 
+using AmbiMote.Core.Config;
 using AmbiMote.Core.Lighting;
 using AmbiMote.Core.Mote;
 
@@ -35,6 +36,10 @@ internal static class LightCommands
         };
         var duration = new Option<double?>("--duration") { Description = "Stop after this many seconds, instead of waiting for Ctrl+C." };
         var fps = new Option<int>("--fps") { Description = "Updates per second.", DefaultValueFactory = _ => 30 };
+        var channelOrder = new Option<bool>("--channel-order")
+        {
+            Description = "Ignore the config and run through every stick in channel order: channel 1 pixel 0 to 15, then channel 2, and so on.",
+        };
 
         colour.Validators.Add(static result =>
         {
@@ -64,10 +69,10 @@ internal static class LightCommands
 
         var command = new Command(
             "effect",
-            "Run a lighting effect on every stick until Ctrl+C, then turn them off. Until sticks are mapped to monitors, "
-            + "effects run through the sticks in order: channel 1 pixel 0 to 15, then channel 2, and so on.")
+            "Run a lighting effect until Ctrl+C, then turn the sticks off. With a config (see 'ambimote config'), effects run "
+            + "clockwise around the monitors; without one, through the sticks in channel order.")
         {
-            name, colour, period, duration, fps,
+            name, colour, period, duration, fps, channelOrder,
             HostCommands.PortOption, HostCommands.BrightnessOption, HostCommands.MaxCurrentOption,
         };
         command.SetAction((parseResult, cancellationToken) => HostCommands.RunOnHosts(parseResult, cancellationToken, async (hosts, token) =>
@@ -84,9 +89,29 @@ internal static class LightCommands
                 _ => new ChaseEffect(rgb, seconds),
             };
 
-            var chain = new StickChain(hosts.SelectMany(static h =>
-                Enumerable.Range(1, MoteProtocol.ChannelCount).Select(channel => (h.Host, channel))));
-            Console.WriteLine($"Running {effectName} on {chain.PixelCount} LEDs. Press Ctrl+C to stop.");
+            AmbiMoteConfig? config = null;
+            if (!parseResult.GetValue(channelOrder) && !ConfigCommands.TryLoad(out config))
+            {
+                return ExitCodes.Config;
+            }
+
+            StickChain chain;
+            if (config is null)
+            {
+                chain = new StickChain(hosts.SelectMany(static h =>
+                    Enumerable.Range(1, MoteProtocol.ChannelCount).Select(channel => (h.Host, channel))));
+            }
+            else if (ConfigCommands.CreateMappedChain(config, hosts) is { } mapped)
+            {
+                chain = mapped;
+            }
+            else
+            {
+                return ExitCodes.NoDevice;
+            }
+
+            Console.WriteLine(
+                $"Running {effectName} on {chain.PixelCount} LEDs, {(config is null ? "in channel order" : "around the monitors")}. Press Ctrl+C to stop.");
 
             using var stop = CancellationTokenSource.CreateLinkedTokenSource(token);
             if (parseResult.GetValue(duration) is { } limit)

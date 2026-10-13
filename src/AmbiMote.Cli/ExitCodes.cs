@@ -13,4 +13,7 @@ internal static class ExitCodes
 
     /// <summary>No Mote host is plugged in, or none matches <c>--port</c>.</summary>
     public const int NoDevice = 3;
+
+    /// <summary>The config file is missing or not valid.</summary>
+    public const int Config = 4;
 }

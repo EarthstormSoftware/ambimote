@@ -2,10 +2,7 @@ using AmbiMote.Core.Mote;
 
 namespace AmbiMote.Core.Lighting;
 
-/// <summary>
-/// All the sticks lit by an effect, joined into one run of LEDs. Until sticks are mapped to monitors,
-/// positions follow the order the sticks were given in, pixel 0 to the end of each stick.
-/// </summary>
+/// <summary>All the sticks lit by an effect, joined into one run of LEDs.</summary>
 public sealed class StickChain
 {
     private readonly (MoteHost Host, int Channel, int Offset, int Length)[] _sticks;
@@ -13,7 +10,12 @@ public sealed class StickChain
     private readonly double[] _positions;
     private readonly Rgb[] _pixels;
 
-    public StickChain(IEnumerable<(MoteHost Host, int Channel)> sticks)
+    /// <param name="sticks">The sticks, in the order their pixels appear in <paramref name="positions"/>.</param>
+    /// <param name="positions">
+    /// Where each pixel sits around the setup, from <see cref="SetupLayout.Positions"/>. Default: evenly through the
+    /// sticks in the order given, pixel 0 to the end of each stick, for sticks that are not mapped to monitors.
+    /// </param>
+    public StickChain(IEnumerable<(MoteHost Host, int Channel)> sticks, IReadOnlyList<double>? positions = null)
     {
         ArgumentNullException.ThrowIfNull(sticks);
         var list = new List<(MoteHost, int, int, int)>();
@@ -28,10 +30,22 @@ public sealed class StickChain
         _sticks = [.. list];
         _hosts = [.. _sticks.Select(static s => s.Host).Distinct()];
         _pixels = new Rgb[offset];
-        _positions = new double[offset];
-        for (int i = 0; i < offset; i++)
+        if (positions is not null)
         {
-            _positions[i] = (double)i / offset;
+            if (positions.Count != offset)
+            {
+                throw new ArgumentException($"There are {offset} pixels but {positions.Count} positions.", nameof(positions));
+            }
+
+            _positions = [.. positions];
+        }
+        else
+        {
+            _positions = new double[offset];
+            for (int i = 0; i < offset; i++)
+            {
+                _positions[i] = (double)i / offset;
+            }
         }
     }
 

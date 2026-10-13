@@ -1,0 +1,26 @@
+{
+  // Copy to %APPDATA%\AmbiMote\config.json and fill in your own values.
+  // instanceId comes from `ambimote list`, and monitor from `ambimote monitors`.
+  // Positions along an edge run from 0 to 1, left to right (top and bottom edges) or top to bottom
+  // (left and right edges). `from` is where the stick's first LED is; `to` is where its last LED is.
+  //
+  // This example has three monitors with sticks along their tops and outer edges, using two
+  // Mote hosts that meet in the middle of the centre monitor:
+  //
+  //   [ left 3 ][ left 2 ]  [ left 1 ][ right 1 ]  [ right 2 ][ right 3 ]
+  //  left 4                                                         right 4
+  "hosts": [
+    { "id": "left", "instanceId": "USB\\VID_16D0&PID_08C4\\0&00000000&0&1" },
+    { "id": "right", "instanceId": "USB\\VID_16D0&PID_08C4\\0&00000000&0&2" }
+  ],
+  "sticks": [
+    { "host": "left", "channel": 1, "monitor": "\\\\.\\DISPLAY1", "edge": "top", "from": 0.5, "to": 0.0 },
+    { "host": "left", "channel": 2, "monitor": "\\\\.\\DISPLAY2", "edge": "top", "from": 1.0, "to": 0.5 },
+    { "host": "left", "channel": 3, "monitor": "\\\\.\\DISPLAY2", "edge": "top", "from": 0.5, "to": 0.0 },
+    { "host": "left", "channel": 4, "monitor": "\\\\.\\DISPLAY2", "edge": "left", "from": 0.0, "to": 1.0 },
+    { "host": "right", "channel": 1, "monitor": "\\\\.\\DISPLAY1", "edge": "top", "from": 0.5, "to": 1.0 },
+    { "host": "right", "channel": 2, "monitor": "\\\\.\\DISPLAY3", "edge": "top", "from": 0.0, "to": 0.5 },
+    { "host": "right", "channel": 3, "monitor": "\\\\.\\DISPLAY3", "edge": "top", "from": 0.5, "to": 1.0 },
+    { "host": "right", "channel": 4, "monitor": "\\\\.\\DISPLAY3", "edge": "right", "from": 0.0, "to": 1.0 }
+  ]
+}
