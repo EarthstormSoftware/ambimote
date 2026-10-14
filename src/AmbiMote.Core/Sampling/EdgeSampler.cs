@@ -41,6 +41,55 @@ public static class EdgeSampler
         }
     }
 
+    /// <summary>
+    /// Fills <paramref name="pixels"/> for a stick on a monitor beside the captured one, as if the picture carried on
+    /// sideways. A stick on that monitor's left or right edge copies the image's <paramref name="side"/> edge at the same
+    /// heights. A stick along its top or bottom fades from the image's nearest corner, at the end next to the image, to
+    /// the colour of the top (or bottom) half of the <paramref name="side"/> edge at the far end.
+    /// </summary>
+    /// <param name="side">Which side of the image the stick's monitor is on: <see cref="ScreenEdge.Left"/> or <see cref="ScreenEdge.Right"/>.</param>
+    /// <param name="edge">The edge of its own monitor the stick sits on.</param>
+    /// <param name="from">Where pixel 0 sits along that edge, as for <see cref="Sample"/>.</param>
+    /// <param name="to">Where the last pixel sits along that edge.</param>
+    /// <param name="depth">How far into the image to sample, as for <see cref="Sample"/>. The corner is as wide as this too.</param>
+    public static void Extend(BgraImage image, ScreenEdge side, ScreenEdge edge, double from, double to, double depth, Span<Rgb> pixels)
+    {
+        if (side is not (ScreenEdge.Left or ScreenEdge.Right))
+        {
+            throw new ArgumentOutOfRangeException(nameof(side), side, "The stick's monitor must be to the left or right of the image.");
+        }
+
+        if (edge is ScreenEdge.Left or ScreenEdge.Right)
+        {
+            Sample(image, side, from, to, depth, pixels);
+            return;
+        }
+
+        ValidateFraction(from, nameof(from));
+        ValidateFraction(to, nameof(to));
+        Span<Rgb> one = stackalloc Rgb[1];
+        bool left = side == ScreenEdge.Left;
+        Sample(image, edge, left ? 0 : 1 - depth, left ? depth : 1, depth, one);
+        var corner = one[0];
+        bool top = edge == ScreenEdge.Top;
+        Sample(image, side, top ? 0 : 0.5, top ? 0.5 : 1, depth, one);
+        var outer = one[0];
+
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            double position = from + ((to - from) * (i + 0.5) / pixels.Length);
+
+            // A monitor on the left meets the image at its right end, position 1.
+            double away = left ? 1 - position : position;
+            pixels[i] = Lerp(corner, outer, away);
+        }
+    }
+
+    private static Rgb Lerp(Rgb a, Rgb b, double t) => new(
+        (byte)Math.Round(a.R + ((b.R - a.R) * t)),
+        (byte)Math.Round(a.G + ((b.G - a.G) * t)),
+        (byte)Math.Round(a.B + ((b.B - a.B) * t)));
+
     private static Rgb Average(BgraImage image, int x0, int x1, int y0, int y1)
     {
         long r = 0, g = 0, b = 0;

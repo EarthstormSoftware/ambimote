@@ -196,5 +196,39 @@ public class AmbientMirrorTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new AmbientMirror([], smoothingSeconds: -1));
         Assert.Throws<ArgumentOutOfRangeException>(() => new AmbientMirror([], depth: 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new AmbientMirror([]).Depth = 1.5);
+    }
+
+    [Fact]
+    public void Depth_SetsHowFarIntoTheScreenColoursComeFrom_FromTheNextFrame()
+    {
+        // The top two rows are grey and the rest black.
+        static BgraImage TopRowsGrey()
+        {
+            var image = new BgraImage(8, 8);
+            for (int y = 0; y < 8; y++)
+            {
+                for (int x = 0; x < 8; x++)
+                {
+                    image.SetPixel(x, y, y < 2 ? new Rgb(200, 200, 200) : Rgb.Black);
+                }
+            }
+
+            return image;
+        }
+
+        var (host, _) = CreateHost();
+        var capture = new QueuedCapture();
+        capture.Frames.Enqueue(TopRowsGrey());
+        capture.Frames.Enqueue(TopRowsGrey());
+        var mirror = new AmbientMirror([new AmbientMonitor(capture, [new AmbientStick(host, 1, ScreenEdge.Top, 0, 1)])], smoothingSeconds: 0, depth: 0.25);
+
+        mirror.Update(1.0 / 30);
+        var shallow = host.GetPixels(1)[0];
+        mirror.Depth = 0.5;
+        mirror.Update(1.0 / 30);
+
+        Assert.Equal(new Rgb(200, 200, 200), shallow);
+        Assert.Equal(new Rgb(100, 100, 100), host.GetPixels(1)[0]);
     }
 }

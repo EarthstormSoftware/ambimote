@@ -270,6 +270,51 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE7F4;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Colours from" />
+                                        <TextBlock
+                                            Style="{StaticResource CardDescriptionStyle}"
+                                            Text="Each stick's own monitor, or one monitor for every stick"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ComboBox
+                                        x:Name="AmbientSourceBox"
+                                        Grid.Column="2"
+                                        MinWidth="200"
+                                        Margin="12,0,0,0"
+                                        VerticalAlignment="Center"
+                                        DropDownOpened="SourceBox_DropDownOpened"
+                                        SelectionChanged="AmbientSourceBox_SelectionChanged" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE8A9;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Extend to the other monitors" />
+                                        <TextBlock
+                                            Style="{StaticResource CardDescriptionStyle}"
+                                            Text="When the colours come from one monitor: light the other sticks as if its picture carried on sideways, or leave them dark"
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <ToggleSwitch
+                                        x:Name="ExtendSwitch"
+                                        Grid.Column="2"
+                                        MinWidth="0"
+                                        OffContent=""
+                                        OnContent=""
+                                        Toggled="ExtendSwitch_Toggled" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <FontIcon Glyph="&#xE81C;" Style="{StaticResource CardIconStyle}" />
@@ -285,6 +330,27 @@
                                         Style="{StaticResource CardSliderStyle}"
                                         ValueChanged="SmoothingSlider_ValueChanged" />
                                     <TextBlock x:Name="SmoothingValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE740;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Depth" />
+                                        <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="How far into the screen the colours come from" />
+                                    </StackPanel>
+                                    <Slider
+                                        x:Name="DepthSlider"
+                                        Grid.Column="2"
+                                        Maximum="50"
+                                        Minimum="2"
+                                        Style="{StaticResource CardSliderStyle}"
+                                        ValueChanged="DepthSlider_ValueChanged" />
+                                    <TextBlock x:Name="DepthValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
                                 </Grid>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -551,6 +617,29 @@
                                             Margin="12,0,0,0"
                                             VerticalAlignment="Center"
                                             SelectionChanged="FullScreenModeBox_SelectionChanged" />
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE7F4;" Style="{StaticResource CardIconStyle}" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Full-screen colours from" />
+                                            <TextBlock
+                                                Style="{StaticResource CardDescriptionStyle}"
+                                                Text="For ambient while full screen; back to the Ambient page's choice afterwards"
+                                                TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <ComboBox
+                                            x:Name="FullScreenSourceBox"
+                                            Grid.Column="2"
+                                            MinWidth="150"
+                                            Margin="12,0,0,0"
+                                            VerticalAlignment="Center"
+                                            DropDownOpened="SourceBox_DropDownOpened"
+                                            SelectionChanged="FullScreenSourceBox_SelectionChanged" />
                                     </Grid>
                                     <Grid>
                                         <Grid.ColumnDefinitions>

@@ -203,4 +203,33 @@ public sealed class AutoModeSwitcherTests
         Assert.Equal(LightingMode.Ambient, AppSettings.Parse("{}").AutoMode.FullScreen);
         Assert.Empty(AppSettings.Parse("""{ "autoMode": { "apps": null } }""").AutoMode.Apps);
     }
+
+    [Fact]
+    public void FullScreenInCharge_OnlyWhileTheFullScreenRuleIs()
+    {
+        Assert.False(_switcher.FullScreenInCharge);
+        Show(s_video);
+        Assert.True(_switcher.FullScreenInCharge);
+        Show(s_game);
+        Assert.False(_switcher.FullScreenInCharge);
+        Show(s_video);
+        Show(s_browser);
+        Assert.False(_switcher.FullScreenInCharge);
+    }
+
+    [Fact]
+    public void ForFullScreen_UsesItsOwnSourceMonitor_WithoutChangingTheSavedLighting()
+    {
+        var lighting = new LightingSettings { AmbientSource = null, Depth = 0.3 };
+        var settings = (s_settings with { FullScreenSource = @"\.\DISPLAY1" }).Normalised();
+
+        var applied = settings.ForFullScreen(lighting);
+
+        Assert.Equal(lighting with { AmbientSource = @"\.\DISPLAY1" }, applied);
+        Assert.Null(lighting.AmbientSource);
+        Assert.Same(lighting, s_settings.ForFullScreen(lighting));
+        Assert.Null((s_settings with { FullScreenSource = " " }).Normalised().FullScreenSource);
+        Assert.NotEqual(s_settings, settings);
+        Assert.Equal(settings, AppSettings.Parse(new AppSettings { AutoMode = settings }.ToJson()).AutoMode);
+    }
 }

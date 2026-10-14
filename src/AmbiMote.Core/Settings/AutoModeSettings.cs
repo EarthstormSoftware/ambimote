@@ -15,6 +15,13 @@ public sealed record AutoModeSettings
     /// <summary>The mode while a full-screen window is in front, or null to leave the mode alone.</summary>
     public LightingMode? FullScreen { get; init; } = LightingMode.Ambient;
 
+    /// <summary>
+    /// The monitor ambient mode takes its colours from while <see cref="FullScreen"/> is in charge, such as
+    /// <c>\\.\DISPLAY1</c>, or null to use <see cref="LightingSettings.AmbientSource"/>. It is never saved as the
+    /// user's own choice, so it ends with the full-screen window. See <see cref="ForFullScreen"/>.
+    /// </summary>
+    public string? FullScreenSource { get; init; }
+
     /// <summary>Programs with a mode of their own. These win over <see cref="FullScreen"/>.</summary>
     public IReadOnlyList<AppModeRule> Apps { get; init; } = [];
 
@@ -45,6 +52,10 @@ public sealed record AutoModeSettings
         return (this with { Apps = [.. apps] }).Normalised();
     }
 
+    /// <summary>What the lights show while <see cref="FullScreen"/> is in charge: <paramref name="lighting"/> with <see cref="FullScreenSource"/>, if set.</summary>
+    public LightingSettings ForFullScreen(LightingSettings lighting) =>
+        FullScreenSource is { } source ? lighting with { AmbientSource = source } : lighting;
+
     public AutoModeSettings WithoutApp(string app) =>
         this with { Apps = [.. Apps.Where(r => !string.Equals(r.App, app, StringComparison.OrdinalIgnoreCase))] };
 
@@ -65,13 +76,14 @@ public sealed record AutoModeSettings
         return this with
         {
             FullScreen = FullScreen is { } mode && !Enum.IsDefined(mode) ? null : FullScreen,
+            FullScreenSource = string.IsNullOrWhiteSpace(FullScreenSource) ? null : FullScreenSource,
             Apps = apps,
         };
     }
 
     // Records compare lists by reference; compare the rules instead, so unchanged settings are not saved again.
     public bool Equals(AutoModeSettings? other) =>
-        other is not null && FullScreen == other.FullScreen && Apps.SequenceEqual(other.Apps);
+        other is not null && FullScreen == other.FullScreen && FullScreenSource == other.FullScreenSource && Apps.SequenceEqual(other.Apps);
 
     public override int GetHashCode() => HashCode.Combine(FullScreen, Apps.Count);
 }

@@ -455,6 +455,7 @@ public sealed class LightingEngine : IDisposable
         private readonly List<string> _ambientProblems = [];
         private readonly LayoutStick[] _layout;
         private readonly DisplayOutput[] _layoutMonitors;
+        private readonly IReadOnlyList<DisplayOutput> _monitors;
         private readonly AmbiMoteConfig? _config;
         private AmbientMirror? _mirror;
         private LightingSettings? _shown;
@@ -472,6 +473,7 @@ public sealed class LightingEngine : IDisposable
             _hardware = hardware;
             _hosts = hosts;
             _config = config;
+            _monitors = monitors;
             _hasConfig = config is not null;
             var byInfo = hosts.ToDictionary(static h => h.Info, static h => h.Host);
             if (config is null)
@@ -669,6 +671,15 @@ public sealed class LightingEngine : IDisposable
 
         private (bool Animated, EngineStatus Status) UpdateAmbient(LightingSettings settings, LightingSettings? previous, bool resend, double elapsed)
         {
+            if (previous is not null
+                && (!string.Equals(previous.AmbientSource, settings.AmbientSource, StringComparison.OrdinalIgnoreCase)
+                    || previous.OuterSticks != settings.OuterSticks))
+            {
+                // Different monitors to capture: start again.
+                CloseAmbient();
+                resend = true;
+            }
+
             if (_mirror is null && resend)
             {
                 OpenAmbient(settings);
@@ -698,6 +709,7 @@ public sealed class LightingEngine : IDisposable
             }
 
             _mirror.SmoothingSeconds = settings.Smoothing;
+            _mirror.Depth = settings.Depth;
             var update = _mirror.Update(elapsed);
             if (resend && update.Sent == 0)
             {
@@ -713,9 +725,8 @@ public sealed class LightingEngine : IDisposable
         private void OpenAmbient(LightingSettings settings)
         {
             _ambientProblems.Clear();
-            var byInfo = _hosts.ToDictionary(static h => h.Info, static h => h.Host);
             var monitors = new List<AmbientMonitor>();
-            foreach (var group in _mapped.GroupBy(static s => s.Monitor.DeviceName, StringComparer.OrdinalIgnoreCase))
+            foreach (var group in AmbientSticks(settings).GroupBy(static s => s.Capture, StringComparer.OrdinalIgnoreCase))
             {
                 IScreenCapture capture;
                 try
@@ -729,20 +740,61 @@ public sealed class LightingEngine : IDisposable
                 }
 
                 _captures.Add(capture);
-                monitors.Add(new AmbientMonitor(
-                    capture,
-                    [.. group.Select(s => new AmbientStick(byInfo[s.Host], s.Stick.Channel, s.Stick.Edge, s.Stick.From, s.Stick.To))]));
+                monitors.Add(new AmbientMonitor(capture, [.. group.Select(static s => s.Stick)]));
             }
 
             if (monitors.Count > 0)
             {
                 // Start dark rather than with the last mode's colours on sticks whose monitor is not captured.
+                var mirrored = monitors.SelectMany(static m => m.Sticks).Select(static s => s.Host).ToHashSet();
                 foreach (var (_, host) in _hosts)
                 {
                     host.Clear();
+                    if (!mirrored.Contains(host))
+                    {
+                        // The mirror never sends to this host, so turn it dark now.
+                        host.Show();
+                    }
                 }
 
-                _mirror = new AmbientMirror(monitors, settings.Smoothing, processor: new ColourProcessor(settings.Gamma, settings.Saturation));
+                _mirror = new AmbientMirror(monitors, settings.Smoothing, settings.Depth, processor: new ColourProcessor(settings.Gamma, settings.Saturation));
+            }
+        }
+
+        /// <summary>
+        /// The sticks ambient mode lights, each with the monitor to capture for it. With an
+        /// <see cref="LightingSettings.AmbientSource"/>, everything comes from that monitor: sticks on monitors to its left
+        /// or right are extended from it or left dark, and sticks on monitors above or below it stay dark.
+        /// </summary>
+        private IEnumerable<(string Capture, AmbientStick Stick)> AmbientSticks(LightingSettings settings)
+        {
+            var byInfo = _hosts.ToDictionary(static h => h.Info, static h => h.Host);
+            DisplayOutput? source = null;
+            if (settings.AmbientSource is { } name)
+            {
+                source = _monitors.FirstOrDefault(m => string.Equals(m.DeviceName, name, StringComparison.OrdinalIgnoreCase));
+                if (source is null)
+                {
+                    _ambientProblems.Add($"The ambient source monitor {name} is not connected, so each stick follows its own monitor.");
+                }
+            }
+
+            foreach (var s in _mapped)
+            {
+                var host = byInfo[s.Host];
+                if (source is null || string.Equals(s.Monitor.DeviceName, source.DeviceName, StringComparison.OrdinalIgnoreCase))
+                {
+                    yield return (s.Monitor.DeviceName, new AmbientStick(host, s.Stick.Channel, s.Stick.Edge, s.Stick.From, s.Stick.To));
+                    continue;
+                }
+
+                ScreenEdge? side = s.Monitor.Left + s.Monitor.Width <= source.Left ? ScreenEdge.Left
+                    : s.Monitor.Left >= source.Left + source.Width ? ScreenEdge.Right
+                    : null;
+                if (settings.OuterSticks == OuterSticks.Extend && side is not null)
+                {
+                    yield return (source.DeviceName, new AmbientStick(host, s.Stick.Channel, s.Stick.Edge, s.Stick.From, s.Stick.To, side));
+                }
             }
         }
 

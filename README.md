@@ -27,7 +27,9 @@ window picks the mode:
 - **Light**: white light from candle (1900 K) to daylight (6500 K).
 - **Colour**: one colour all round.
 - **Effect**: rainbow, breathe, candle or chase, at an adjustable speed.
-- **Ambient**: the colours at the edges of the screens, with smoothing, saturation and gamma.
+- **Ambient**: the colours at the edges of the screens, with smoothing, depth (how far into the screen the
+  colours come from), saturation and gamma. The colours can come from each stick's own monitor, or from one
+  monitor for every stick: the sticks on the monitors beside it then carry its picture on sideways, or stay dark.
 
 Every mode page has the on/off switch and brightness. Turning the lights off frees the Mote hosts
 for the `ambimote` command, and turning them on goes back to the last mode. The cog at the bottom
@@ -45,7 +47,8 @@ or turn them off in the settings; if another program already uses one, the setti
 **Automatic mode** switches the mode by what is in front: Ambient while a game or video fills the screen (the
 default; choose another mode or none in the settings), or a mode of its own for a program you add, such as a
 game. The mode goes back afterwards, unless you changed it meanwhile, and lights you turned off stay off. A
-quick Alt+Tab or opening AmbiMote itself changes nothing.
+quick Alt+Tab or opening AmbiMote itself changes nothing. Full screen can also take its colours from one monitor,
+such as the one you game on, and goes back to your own Ambient choice afterwards.
 
 The app reopens a Mote host that is unplugged and plugged back in, and **Reconnect** reloads
 `config.json` after you edit it. Its own settings are saved to `%APPDATA%\AmbiMote\settings.json`.

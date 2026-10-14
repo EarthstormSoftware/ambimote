@@ -479,6 +479,7 @@ public class LightingEngineTests
             Kelvin = 100,
             EffectSpeed = double.NaN,
             Gamma = 10,
+            Depth = 0,
         }.Normalised();
 
         Assert.Equal(new LightingSettings().Mode, settings.Mode);
@@ -486,5 +487,69 @@ public class LightingEngineTests
         Assert.Equal(LightingSettings.MinKelvin, settings.Kelvin);
         Assert.Equal(1, settings.EffectSpeed);
         Assert.Equal(4, settings.Gamma);
+        Assert.Equal(LightingSettings.MinDepth, settings.Depth);
+    }
+
+    private const string Display2 = @"\.\DISPLAY2";
+
+    /// <summary>DISPLAY1 with DISPLAY2 to its right, and a stick along the top of each.</summary>
+    private static (LightingEngine Engine, FakeHardware Hardware) CreateTwoMonitors(LightingSettings settings)
+    {
+        var (engine, hardware) = Create(settings, "COM5");
+        hardware.Monitors.Add(new DisplayOutput(Display2, 1920, 0, 1920, 1080, false, "GPU"));
+        hardware.Config = new AmbiMoteConfig(
+            [new HostConfig("COM5", Info("COM5").InstanceId)],
+            [new StickConfig("COM5", 1, Display1, ScreenEdge.Top, 0, 1), new StickConfig("COM5", 2, Display2, ScreenEdge.Top, 0, 1)]);
+        return (engine, hardware);
+    }
+
+    [Fact]
+    public void Ambient_WithASource_CapturesOnlyThatMonitorAndExtendsItToTheOthers()
+    {
+        var (engine, hardware) = CreateTwoMonitors(new LightingSettings
+        {
+            Mode = LightingMode.Ambient, Smoothing = 0, Gamma = 1, Saturation = 1, AmbientSource = Display1,
+        });
+        hardware.NextFrames.Enqueue(Filled(new Rgb(100, 50, 0)));
+
+        engine.Tick(0);
+        var host = hardware.Opened["COM5"].Host;
+
+        Assert.Single(hardware.Captures);
+        Assert.Equal(new Rgb(100, 50, 0), host.GetPixels(1)[0]);
+        Assert.All(host.GetPixels(2).ToArray(), static p => Assert.Equal(new Rgb(100, 50, 0), p));
+    }
+
+    [Fact]
+    public void Ambient_WithASourceAndOuterSticksOff_LeavesTheOthersDark_AndReopensWhenTheSourceChanges()
+    {
+        var (engine, hardware) = CreateTwoMonitors(new LightingSettings
+        {
+            Mode = LightingMode.Ambient, Smoothing = 0, Gamma = 1, Saturation = 1, AmbientSource = Display1, OuterSticks = OuterSticks.Off,
+        });
+        hardware.NextFrames.Enqueue(Filled(new Rgb(100, 50, 0)));
+
+        engine.Tick(0);
+        var host = hardware.Opened["COM5"].Host;
+
+        Assert.Equal(new Rgb(100, 50, 0), host.GetPixels(1)[0]);
+        Assert.Equal(Rgb.Black, host.GetPixels(2)[0]);
+
+        engine.Apply(engine.Settings with { AmbientSource = null });
+        engine.Tick(0.1);
+
+        Assert.True(hardware.Captures[0].Disposed);
+        Assert.Equal(3, hardware.Captures.Count);
+    }
+
+    [Fact]
+    public void Ambient_WithAMissingSource_FollowsEachMonitorAndSaysSo()
+    {
+        var (engine, hardware) = CreateTwoMonitors(new LightingSettings { Mode = LightingMode.Ambient, AmbientSource = @"\.\DISPLAY9" });
+
+        engine.Tick(0);
+
+        Assert.Equal(2, hardware.Captures.Count);
+        Assert.Contains(engine.Status.Problems, static p => p.Contains("DISPLAY9", StringComparison.Ordinal));
     }
 }

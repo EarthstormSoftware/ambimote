@@ -128,7 +128,7 @@ internal static class CaptureCommands
         var depth = new Option<double>("--depth")
         {
             Description = "How far into the screen to sample, as a fraction of its width or height.",
-            DefaultValueFactory = _ => 0.1,
+            DefaultValueFactory = _ => AmbientMirror.DefaultDepth,
         };
         var fps = new Option<int>("--fps") { Description = "Most updates per second.", DefaultValueFactory = _ => 30 };
         var stats = new Option<bool>("--stats") { Description = "Every second, print how many frames were captured and sent, and the time spent." };
@@ -323,7 +323,7 @@ internal static class CaptureCommands
         var depth = new Option<double>("--depth")
         {
             Description = "How far into the screen to sample, as a fraction of its width or height.",
-            DefaultValueFactory = _ => 0.1,
+            DefaultValueFactory = _ => AmbientMirror.DefaultDepth,
         };
         var fps = new Option<int>("--fps") { Description = "Most updates per second.", DefaultValueFactory = _ => 30 };
         var stats = new Option<bool>("--stats") { Description = "Every second, print how many frames were captured and sent, and the time spent." };

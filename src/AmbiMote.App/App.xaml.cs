@@ -58,13 +58,17 @@ public partial class App : Application
         _screens = new ScreenStateWatcher();
         _screens.Changed += (_, _) => UpdatePaused();
         _autoMode = new AutoModeWatcher(_store, _screens, _dispatcher);
-        _autoMode.Changed += (_, _) => UpdateTray();
+        _autoMode.Changed += (_, _) =>
+        {
+            _engine.Apply(EngineLighting());
+            UpdateTray();
+        };
         _hotkeys = new HotkeyManager();
         _hotkeys.Pressed += (_, action) => Run(HotkeySettings.CommandFor(action));
         _hotkeys.Apply(_store.Current.Hotkeys);
         _store.Changed += (_, _) =>
         {
-            _engine.Apply(_store.Current.Lighting);
+            _engine.Apply(EngineLighting());
             _hotkeys.Apply(_store.Current.Hotkeys);
             UpdatePaused();
             UpdateTray();
@@ -220,6 +224,13 @@ public partial class App : Application
                 _store.Update(command.ApplyTo);
                 break;
         }
+    }
+
+    /// <summary>The saved lighting, with the full-screen rule's own source monitor while that rule is in charge.</summary>
+    private LightingSettings EngineLighting()
+    {
+        var settings = _store.Current;
+        return _autoMode.FullScreenInCharge ? settings.AutoMode.ForFullScreen(settings.Lighting) : settings.Lighting;
     }
 
     /// <summary>Lights off while nobody can see the screens, if the user wants that.</summary>

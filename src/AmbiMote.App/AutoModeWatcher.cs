@@ -37,6 +37,9 @@ internal sealed class AutoModeWatcher : IDisposable
     /// <summary>What the mode was switched for, such as <c>game.exe</c>, while a rule is in charge; otherwise null.</summary>
     public string? Reason => _switcher.Reason;
 
+    /// <summary>True while the full-screen rule is in charge, so <see cref="AmbiMote.Core.Settings.AutoModeSettings.FullScreenSource"/> applies.</summary>
+    public bool FullScreenInCharge => _switcher.FullScreenInCharge;
+
     /// <summary>Goes back to the user's own mode, so that is the one saved when AmbiMote exits.</summary>
     public void Release()
     {

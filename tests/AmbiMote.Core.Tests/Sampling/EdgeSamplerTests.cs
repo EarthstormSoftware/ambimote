@@ -124,4 +124,54 @@ public class EdgeSamplerTests
 
         Assert.Throws<ArgumentOutOfRangeException>(() => EdgeSampler.Sample(image, ScreenEdge.Top, from, to, depth, new Rgb[4]));
     }
+
+    /// <summary>A 10 x 10 image: the top row red, column <paramref name="column"/> below it blue, the rest black.</summary>
+    private static BgraImage RedTopBlueColumn(int column)
+    {
+        var image = new BgraImage(10, 10);
+        for (int y = 0; y < 10; y++)
+        {
+            for (int x = 0; x < 10; x++)
+            {
+                image.SetPixel(x, y, y == 0 ? new Rgb(200, 0, 0) : x == column ? new Rgb(0, 0, 200) : Rgb.Black);
+            }
+        }
+
+        return image;
+    }
+
+    [Theory]
+    [InlineData(ScreenEdge.Left, 0)]
+    [InlineData(ScreenEdge.Right, 9)]
+    public void Extend_TopFadesFromTheCornerNextToTheImageToItsSideEdge(ScreenEdge side, int column)
+    {
+        var image = RedTopBlueColumn(column);
+        var pixels = new Rgb[2];
+
+        EdgeSampler.Extend(image, side, ScreenEdge.Top, 0, 1, 0.1, pixels);
+
+        // The corner is red; the top half of the side edge is one red row and four blue: (40, 0, 160).
+        // A monitor on the left meets the image at its right end, so the fade runs the other way.
+        Rgb near = new(160, 0, 40), far = new(80, 0, 120);
+        Assert.Equal(side == ScreenEdge.Left ? [far, near] : new[] { near, far }, pixels);
+    }
+
+    [Fact]
+    public void Extend_SideStickCopiesTheImagesSideEdgeAtTheSameHeights()
+    {
+        var image = Gradient(10, 8);
+        var extended = new Rgb[4];
+        var sampled = new Rgb[4];
+
+        EdgeSampler.Extend(image, ScreenEdge.Right, ScreenEdge.Right, 0, 1, 0.1, extended);
+        EdgeSampler.Sample(image, ScreenEdge.Right, 0, 1, 0.1, sampled);
+
+        Assert.Equal(sampled, extended);
+    }
+
+    [Fact]
+    public void Extend_RejectsAMonitorAboveOrBelow()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => EdgeSampler.Extend(Gradient(4, 4), ScreenEdge.Top, ScreenEdge.Top, 0, 1, 0.1, new Rgb[2]));
+    }
 }

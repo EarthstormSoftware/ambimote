@@ -41,6 +41,16 @@ public enum EffectKind
     Chase,
 }
 
+/// <summary>What ambient mode does with sticks on monitors other than <see cref="LightingSettings.AmbientSource"/>.</summary>
+public enum OuterSticks
+{
+    /// <summary>Lit as if the source monitor's picture carried on sideways. See <see cref="Sampling.EdgeSampler.Extend"/>.</summary>
+    Extend,
+
+    /// <summary>Dark.</summary>
+    Off,
+}
+
 /// <summary>Everything the <see cref="LightingEngine"/> needs to know about what to show.</summary>
 public sealed record LightingSettings
 {
@@ -49,6 +59,8 @@ public sealed record LightingSettings
     public const double MinEffectSpeed = 0.25;
     public const double MaxEffectSpeed = 4;
     public const double MaxSmoothing = 2;
+    public const double MinDepth = 0.02;
+    public const double MaxDepth = 0.5;
 
     public LightingMode Mode { get; init; } = LightingMode.Ambient;
 
@@ -79,6 +91,18 @@ public sealed record LightingSettings
     /// <summary>Seconds for ambient colours to get most of the way to a new screen colour.</summary>
     public double Smoothing { get; init; } = 0.15;
 
+    /// <summary>How far into the screen ambient mode samples, as a fraction of the screen's width or height.</summary>
+    public double Depth { get; init; } = AmbientMirror.DefaultDepth;
+
+    /// <summary>
+    /// The monitor ambient mode takes every colour from, such as <c>\\.\DISPLAY1</c>, or null for each stick to follow
+    /// the monitor it sits behind. See <see cref="OuterSticks"/> for the sticks on other monitors.
+    /// </summary>
+    public string? AmbientSource { get; init; }
+
+    /// <summary>What the sticks on other monitors show when there is an <see cref="AmbientSource"/>.</summary>
+    public OuterSticks OuterSticks { get; init; } = OuterSticks.Extend;
+
     public double Gamma { get; init; } = ColourProcessor.DefaultGamma;
 
     public double Saturation { get; init; } = ColourProcessor.DefaultSaturation;
@@ -107,6 +131,9 @@ public sealed record LightingSettings
             Effect = Enum.IsDefined(Effect) ? Effect : defaults.Effect,
             EffectSpeed = Clamp(EffectSpeed, MinEffectSpeed, MaxEffectSpeed, defaults.EffectSpeed),
             Smoothing = Clamp(Smoothing, 0, MaxSmoothing, defaults.Smoothing),
+            Depth = Clamp(Depth, MinDepth, MaxDepth, defaults.Depth),
+            AmbientSource = string.IsNullOrWhiteSpace(AmbientSource) ? null : AmbientSource,
+            OuterSticks = Enum.IsDefined(OuterSticks) ? OuterSticks : defaults.OuterSticks,
             Gamma = Clamp(Gamma, 0.5, 4, defaults.Gamma),
             Saturation = Clamp(Saturation, 0, 3, defaults.Saturation),
             MaxMilliamps = Clamp(MaxMilliamps, 50, 2000, defaults.MaxMilliamps),

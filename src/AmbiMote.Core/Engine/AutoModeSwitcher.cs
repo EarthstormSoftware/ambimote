@@ -16,6 +16,8 @@ public sealed class AutoModeSwitcher
 {
     public const double SettleSeconds = 2;
 
+    private const string FullScreenKey = "fullscreen";
+
     private string? _pendingKey;
     private double _pendingSince;
     private string? _activeKey;
@@ -24,6 +26,9 @@ public sealed class AutoModeSwitcher
 
     /// <summary>Why the mode was changed, such as <c>game.exe</c>, while a rule is in charge; otherwise null.</summary>
     public string? Reason { get; private set; }
+
+    /// <summary>True while the <see cref="AutoModeSettings.FullScreen"/> rule is in charge, rather than a program's rule.</summary>
+    public bool FullScreenInCharge => _activeKey == FullScreenKey;
 
     /// <summary>
     /// Looks at the window in front and returns the mode to switch to, or null to leave the mode alone.
@@ -101,7 +106,7 @@ public sealed class AutoModeSwitcher
 
         if (window.FullScreen && settings.FullScreen is { } fullScreen)
         {
-            return ("fullscreen", fullScreen, "a full-screen window");
+            return (FullScreenKey, fullScreen, "a full-screen window");
         }
 
         return (null, default, null);

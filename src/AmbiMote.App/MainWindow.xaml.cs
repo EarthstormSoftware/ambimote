@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 
 using AmbiMote.Core;
+using AmbiMote.Core.Capture;
 using AmbiMote.Core.Config;
 using AmbiMote.Core.Engine;
 using AmbiMote.Core.Lighting;
@@ -63,6 +64,7 @@ public sealed partial class MainWindow : Window
     private readonly List<(Ellipse Swatch, Rgb Colour)> _swatches = [];
     private readonly Dictionary<LightingMode, FrameworkElement> _modePanels;
     private bool _updating;
+    private List<DisplayOutput>? _monitors;
     private bool _placed;
     private bool _showingSettings;
     private readonly LightingEngine _engine;
@@ -346,8 +348,12 @@ public sealed partial class MainWindow : Window
             SpeedValue.Text = $"{Number(lighting.EffectSpeed, "0.00")}×";
             EffectColourCard.Visibility = lighting.Effect is EffectKind.Breathe or EffectKind.Chase ? Visibility.Visible : Visibility.Collapsed;
 
+            ShowSources(AmbientSourceBox, "Each monitor", lighting.AmbientSource);
+            ExtendSwitch.IsOn = lighting.OuterSticks == OuterSticks.Extend;
             SmoothingSlider.Value = Math.Round(lighting.Smoothing * 100);
             SmoothingValue.Text = $"{Number(lighting.Smoothing, "0.00")} s";
+            DepthSlider.Value = Math.Round(lighting.Depth * 100);
+            DepthValue.Text = $"{Math.Round(lighting.Depth * 100)}%";
             SaturationSlider.Value = Math.Round(lighting.Saturation * 100);
             SaturationValue.Text = Number(lighting.Saturation, "0.00");
             GammaSlider.Value = Math.Round(lighting.Gamma * 100);
@@ -358,6 +364,7 @@ public sealed partial class MainWindow : Window
             MinimiseToTraySwitch.IsOn = settings.MinimiseToTray;
             PauseWhenAwaySwitch.IsOn = settings.PauseWhenAway;
             FullScreenModeBox.SelectedIndex = settings.AutoMode.FullScreen is { } fullScreen ? Array.IndexOf(s_ruleModes, fullScreen) + 1 : 0;
+            ShowSources(FullScreenSourceBox, "As on the Ambient page", settings.AutoMode.FullScreenSource);
             ShowAppRules(settings.AutoMode.Apps);
             HotkeysSwitch.IsOn = settings.Hotkeys.Enabled;
             foreach (var (action, button) in _hotkeyButtons)
@@ -488,6 +495,88 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Fills a source list with <paramref name="none"/> (for null) and the monitors attached now, keeping the chosen
+    /// one even if it is not attached. The monitor names behind the items are kept in the box's <c>Tag</c>.
+    /// </summary>
+    private void ShowSources(ComboBox box, string none, string? chosen)
+    {
+        _monitors ??= [.. DisplayOutput.List().OrderBy(static m => m.Left).ThenBy(static m => m.Top)];
+        List<string?> sources = [null, .. _monitors.Select(static m => m.DeviceName)];
+        var names = new List<string> { none };
+        names.AddRange(_monitors.Select(static m =>
+            $"{m.DeviceName.TrimStart('\\', '.')} ({m.Width} × {m.Height}{(m.IsPrimary ? ", primary" : "")})"));
+        if (chosen is not null && !sources.Contains(chosen, StringComparer.OrdinalIgnoreCase))
+        {
+            sources.Add(chosen);
+            names.Add($"{chosen.TrimStart('\\', '.')} (not connected)");
+        }
+
+        box.Tag = sources;
+        if (!box.Items.Cast<string>().SequenceEqual(names))
+        {
+            box.Items.Clear();
+            foreach (var name in names)
+            {
+                box.Items.Add(name);
+            }
+        }
+
+        box.SelectedIndex = sources.FindIndex(s => string.Equals(s, chosen, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Looks for monitors plugged in or out since the lists were filled.</summary>
+    private void SourceBox_DropDownOpened(object sender, object e)
+    {
+        _monitors = null;
+        UpdateControls();
+    }
+
+    /// <summary>The monitor picked in a list filled by <see cref="ShowSources"/>, or false if nothing is picked.</summary>
+    private static bool TryPickedSource(ComboBox box, out string? source)
+    {
+        source = null;
+        if (box.Tag is not List<string?> sources || box.SelectedIndex < 0 || box.SelectedIndex >= sources.Count)
+        {
+            return false;
+        }
+
+        source = sources[box.SelectedIndex];
+        return true;
+    }
+
+    private void AmbientSourceBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_updating && TryPickedSource(AmbientSourceBox, out string? source))
+        {
+            _store.Update(l => l with { AmbientSource = source });
+        }
+    }
+
+    private void FullScreenSourceBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_updating && TryPickedSource(FullScreenSourceBox, out string? source))
+        {
+            _store.Update(s => s with { AutoMode = s.AutoMode with { FullScreenSource = source } });
+        }
+    }
+
+    private void ExtendSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!_updating)
+        {
+            _store.Update(l => l with { OuterSticks = ExtendSwitch.IsOn ? OuterSticks.Extend : OuterSticks.Off });
+        }
+    }
+
+    private void DepthSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (!_updating)
+        {
+            _store.Update(l => l with { Depth = e.NewValue / 100 });
+        }
+    }
+
     private void SaturationSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
     {
         if (!_updating)
@@ -507,7 +596,7 @@ public sealed partial class MainWindow : Window
     private void AmbientDefaults_Click(object sender, RoutedEventArgs e)
     {
         var defaults = new LightingSettings();
-        _store.Update(l => l with { Smoothing = defaults.Smoothing, Saturation = ColourProcessor.DefaultSaturation, Gamma = ColourProcessor.DefaultGamma });
+        _store.Update(l => l with { Smoothing = defaults.Smoothing, Depth = defaults.Depth, Saturation = ColourProcessor.DefaultSaturation, Gamma = ColourProcessor.DefaultGamma });
     }
 
     private void StartWithWindowsSwitch_Toggled(object sender, RoutedEventArgs e)

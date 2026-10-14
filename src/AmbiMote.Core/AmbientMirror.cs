@@ -8,7 +8,11 @@ namespace AmbiMote.Core;
 /// <summary>A stick lit from part of one edge of a monitor.</summary>
 /// <param name="From">Where pixel 0 sits along the edge, from 0 to 1 (left to right, or top to bottom).</param>
 /// <param name="To">Where the last pixel sits along the edge.</param>
-public sealed record AmbientStick(MoteHost Host, int Channel, ScreenEdge Edge, double From, double To);
+/// <param name="Beside">
+/// Null for a stick on the captured monitor. Otherwise the stick sits on another monitor on this side of it, and
+/// <c>Edge</c>, <c>From</c> and <c>To</c> describe its place on that monitor; see <see cref="EdgeSampler.Extend"/>.
+/// </param>
+public sealed record AmbientStick(MoteHost Host, int Channel, ScreenEdge Edge, double From, double To, ScreenEdge? Beside = null);
 
 /// <summary>One monitor's capture and the sticks behind it.</summary>
 public sealed record AmbientMonitor(IScreenCapture Capture, IReadOnlyList<AmbientStick> Sticks);
@@ -29,17 +33,15 @@ public sealed class AmbientMirror
     private readonly HashSet<MoteHost> _shown = [];
     private ColourProcessor _processor;
     private double _smoothingSeconds;
+    private double _depth;
     private bool _reprocess;
 
     /// <param name="processor">Gamma and saturation applied to the sampled colours. Default: none, colours are sent as sampled.</param>
-    public AmbientMirror(IReadOnlyList<AmbientMonitor> monitors, double smoothingSeconds = 0.15, double depth = 0.1, ColourProcessor? processor = null)
+    public AmbientMirror(IReadOnlyList<AmbientMonitor> monitors, double smoothingSeconds = 0.15, double depth = DefaultDepth, ColourProcessor? processor = null)
     {
         ArgumentNullException.ThrowIfNull(monitors);
         ArgumentOutOfRangeException.ThrowIfNegative(smoothingSeconds);
-        if (depth is <= 0 or > 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(depth), depth, "Depth must be more than 0 and at most 1.");
-        }
+        ValidateDepth(depth);
 
         _monitors = [.. monitors.Select(static m => (m.Capture, m.Sticks.Select(static s => new StickState(s)).ToArray()))];
         _hosts = [.. monitors.SelectMany(static m => m.Sticks).Select(static s => s.Host).Distinct()];
@@ -61,8 +63,22 @@ public sealed class AmbientMirror
         }
     }
 
-    /// <summary>How far into the screen each stick samples, as a fraction of its width or height.</summary>
-    public double Depth { get; }
+    /// <summary>
+    /// The usual <see cref="Depth"/>. The sticks light the wall around the screen, so a band reaching well into the
+    /// picture follows what is on screen better than a thin strip at the very edge.
+    /// </summary>
+    public const double DefaultDepth = 0.15;
+
+    /// <summary>How far into the screen each stick samples, as a fraction of its width or height. A new depth applies from the next captured frame.</summary>
+    public double Depth
+    {
+        get => _depth;
+        set
+        {
+            ValidateDepth(value);
+            _depth = value;
+        }
+    }
 
     /// <summary>
     /// Applied to the sampled colours before smoothing, so fades happen in LED brightness. A new processor applies
@@ -90,7 +106,7 @@ public sealed class AmbientMirror
                 captured++;
                 foreach (var stick in sticks)
                 {
-                    EdgeSampler.Sample(image, stick.Config.Edge, stick.Config.From, stick.Config.To, Depth, stick.Sampled);
+                    stick.Sample(image, Depth);
                     stick.Process(_processor);
                 }
             }
@@ -133,6 +149,14 @@ public sealed class AmbientMirror
         return new AmbientUpdate(captured, sent);
     }
 
+    private static void ValidateDepth(double depth)
+    {
+        if (depth is <= 0 or > 1 || double.IsNaN(depth))
+        {
+            throw new ArgumentOutOfRangeException(nameof(depth), depth, "Depth must be more than 0 and at most 1.");
+        }
+    }
+
     private sealed class StickState(AmbientStick config)
     {
         private readonly double[] _current = new double[config.Host.GetPixels(config.Channel).Length * 3];
@@ -146,6 +170,18 @@ public sealed class AmbientMirror
         public Rgb[] Target { get; } = new Rgb[config.Host.GetPixels(config.Channel).Length];
 
         public bool HasTarget { get; private set; }
+
+        public void Sample(BgraImage image, double depth)
+        {
+            if (Config.Beside is { } side)
+            {
+                EdgeSampler.Extend(image, side, Config.Edge, Config.From, Config.To, depth, Sampled);
+            }
+            else
+            {
+                EdgeSampler.Sample(image, Config.Edge, Config.From, Config.To, depth, Sampled);
+            }
+        }
 
         public void Process(ColourProcessor processor)
         {
