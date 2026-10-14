@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Text.Json;
 
 using AmbiMote.Core;
+using AmbiMote.Core.Control;
 using AmbiMote.Core.Lighting;
 using AmbiMote.Core.Mote;
 
@@ -215,6 +216,11 @@ internal static class HostCommands
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or TimeoutException)
         {
             Console.Error.WriteLine($"Could not talk to the Mote host: {ex.Message}");
+            if (ex is UnauthorizedAccessException && ControlPipe.IsAppRunning())
+            {
+                Console.Error.WriteLine("The AmbiMote app is using it. Control the app with 'ambimote app', or turn its lights off first.");
+            }
+
             return ExitCodes.Error;
         }
         catch (InvalidOperationException) when (hosts.Any(static h => !h.Host.IsOpen))

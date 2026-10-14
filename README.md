@@ -41,7 +41,7 @@ exit from there.
 The app reopens a Mote host that is unplugged and plugged back in, and **Reconnect** reloads
 `config.json` after you edit it. Its own settings are saved to `%APPDATA%\AmbiMote\settings.json`.
 Only one copy runs at a time; starting it again shows the window. The app and the `ambimote`
-command cannot use a host at the same time, so turn the lights off in the app first.
+command cannot use a host at the same time: control the app with `ambimote app` (below), or turn its lights off first.
 
 ## Command line
 
@@ -58,8 +58,26 @@ ambimote run --edge top --channel 1 # light one stick from the top edge of the p
 ambimote ambient --brightness 0.4   # light every stick in the config from its monitor edge until Ctrl+C
 ```
 
+While the desktop app is running it holds the Mote hosts, so the commands above cannot open them. Control the
+app instead with `ambimote app`. It talks to the app on this PC only, through a pipe that only you can use, so
+it also works from scripts, Task Scheduler, AutoHotkey or a Stream Deck button:
+
+```powershell
+ambimote app status                 # mode, brightness and what the app is doing
+ambimote app toggle                 # also on and off
+ambimote app light 2700             # light mode, optionally at a temperature (or candle, warm, neutral, daylight)
+ambimote app colour red             # colour mode, optionally in a new colour
+ambimote app effect candle          # effect mode, optionally with another effect
+ambimote app ambient
+ambimote app next                   # the next mode: light, colour, effect, ambient
+ambimote app brightness 60          # or +10 and -10 to step up and down
+ambimote app identify               # also reconnect, and show to open the window
+```
+
+Add `--json` for the reply as JSON.
+
 Exit codes: `0` success, `1` error, `2` invalid arguments, `3` no Mote host found,
-`4` config file missing or invalid.
+`4` config file missing or invalid, `5` the app is not running.
 
 ## Setup
 

@@ -1,3 +1,4 @@
+using AmbiMote.Core.Control;
 using AmbiMote.Core.Engine;
 using AmbiMote.Core.Settings;
 
@@ -22,6 +23,7 @@ public partial class App : Application
     private LightingEngine _engine = null!;
     private TrayIcon _tray = null!;
     private ScreenStateWatcher _screens = null!;
+    private ControlServer _control = null!;
     private RegisteredWaitHandle? _showRegistration;
     private MainWindow? _window;
     private bool _exiting;
@@ -65,6 +67,8 @@ public partial class App : Application
 
         UpdatePaused();
         _engine.Start();
+        _control = new ControlServer(ControlPipe.DefaultName, HandleControlRequest);
+        _control.Start();
         UpdateTray();
         if (_store.LoadProblem is { } problem)
         {
@@ -121,6 +125,9 @@ public partial class App : Application
         // Turn the lights off and save before the app ends.
         _exiting = true;
         _showRegistration?.Unregister(null);
+
+        // Not waited for: a request in flight is waiting for this thread, and the pipe closes with the process anyway.
+        _ = _control.DisposeAsync().AsTask();
         _engine.Dispose();
         _store.Flush();
         _screens.Dispose();
@@ -150,6 +157,53 @@ public partial class App : Application
         items.Add(TrayMenuItem.Separator);
         items.Add(new TrayMenuItem("Exit", Exit));
         return items;
+    }
+
+    /// <summary>Runs a request from the control pipe on the UI thread, where the settings are changed.</summary>
+    private Task<string> HandleControlRequest(string line)
+    {
+        var reply = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!_dispatcher.TryEnqueue(() =>
+        {
+            if (!ControlCommand.TryParse(line, out var command, out string error))
+            {
+                reply.SetResult(ControlReply.Failed(error).ToJson());
+                return;
+            }
+
+            Run(command);
+            reply.SetResult(ControlReply.From(_store.Current, _engine.Status).ToJson());
+        }))
+        {
+            reply.SetResult(ControlReply.Failed("AmbiMote is closing.").ToJson());
+        }
+
+        return reply.Task;
+    }
+
+    /// <summary>Does what a request from the control pipe or a hotkey asks.</summary>
+    private void Run(ControlCommand command)
+    {
+        if (_exiting)
+        {
+            return;
+        }
+
+        switch (command.Verb)
+        {
+            case ControlVerb.Identify:
+                _engine.Identify();
+                break;
+            case ControlVerb.Reconnect:
+                _engine.Reconnect();
+                break;
+            case ControlVerb.Show:
+                ShowWindow();
+                break;
+            default:
+                _store.Update(command.ApplyTo);
+                break;
+        }
     }
 
     /// <summary>Lights off while nobody can see the screens, if the user wants that.</summary>

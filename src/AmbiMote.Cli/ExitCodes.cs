@@ -16,4 +16,7 @@ internal static class ExitCodes
 
     /// <summary>The config file is missing or not valid.</summary>
     public const int Config = 4;
+
+    /// <summary>The AmbiMote app is not running, or did not answer, so 'ambimote app' has nothing to control.</summary>
+    public const int AppNotRunning = 5;
 }

@@ -19,6 +19,7 @@ root.Subcommands.Add(CaptureCommands.CreateMonitorsCommand());
 root.Subcommands.Add(CaptureCommands.CreateSnapshotCommand());
 root.Subcommands.Add(CaptureCommands.CreateRunCommand());
 root.Subcommands.Add(CaptureCommands.CreateAmbientCommand());
+root.Subcommands.Add(AppCommands.CreateAppCommand());
 
 var parseResult = root.Parse(args);
 int exitCode = await parseResult.InvokeAsync();

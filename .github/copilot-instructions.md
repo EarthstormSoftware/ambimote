@@ -7,8 +7,11 @@ hosts plug in over USB, and no Raspberry Pi is involved.
 
 ## Architecture
 - `src/AmbiMote.Core`: all logic. Mote serial protocol and host discovery, power limiting,
-  and (to come) screen capture, edge sampling, stick mapping and colour processing. No UI code.
-- `src/AmbiMote.Cli`: the `ambimote` command line, for testing hardware and running headless.
+  screen capture, edge sampling, stick mapping, colour processing, the lighting engine and the
+  local control pipe the app listens on. No UI code.
+- `src/AmbiMote.App`: the WinUI 3 desktop app (tray icon, settings window, hotkeys).
+- `src/AmbiMote.Cli`: the `ambimote` command line, for testing hardware, running headless and
+  controlling the running app (`ambimote app`).
   Stable exit codes (`ExitCodes.cs`); never renumber them.
 - `tests/`: xUnit tests. Core logic changes need tests. Hardware access sits behind
   interfaces (`IMoteTransport`) so it can be faked.
