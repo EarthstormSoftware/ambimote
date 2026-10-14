@@ -1,5 +1,13 @@
 namespace AmbiMote.Core.Lighting;
 
+/// <summary>Every LED the same colour, like an ordinary lamp.</summary>
+public sealed class SolidEffect(Rgb colour) : IEffect
+{
+    public Rgb Colour { get; } = colour;
+
+    public void Render(double seconds, ReadOnlySpan<double> positions, Span<Rgb> pixels) => pixels.Fill(Colour);
+}
+
 /// <summary>A rainbow that flows around the setup.</summary>
 /// <param name="periodSeconds">Seconds for the colours to go all the way round once.</param>
 /// <param name="spread">How many rainbows fit around the setup.</param>
@@ -24,8 +32,11 @@ public sealed class BreatheEffect(Rgb colour, double periodSeconds = 6) : IEffec
 
     public void Render(double seconds, ReadOnlySpan<double> positions, Span<Rgb> pixels)
     {
+        // Breathe evenly in how bright it looks, then square to LED level: a wave straight in LED level seems to
+        // rush through the dim part and linger at the top.
         double wave = 0.5 - (0.5 * Math.Cos(2 * Math.PI * seconds / periodSeconds));
-        pixels.Fill(colour.Scale(Low + ((1 - Low) * wave)));
+        double looks = Math.Sqrt(Low) + ((1 - Math.Sqrt(Low)) * wave);
+        pixels.Fill(colour.Scale(looks * looks));
     }
 }
 

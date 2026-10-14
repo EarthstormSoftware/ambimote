@@ -6,15 +6,17 @@
    and the `ambimote list`, `identify`, `fill` and `off` commands.
 2. **Capture one monitor** *(done)*: Desktop Duplication through Vortice.Windows, downscale on the GPU,
    read back a small texture, sample one edge and drive one stick (`ambimote run`, `snapshot`, `monitors`).
-3. **Stick mapping and lamp mode**: record where each stick is mounted and which way round, then
+3. **Stick mapping and lamp mode** *(done)*: record where each stick is mounted and which way round, then
    use the sticks as ordinary lights, like Pimoroni Plasma: any colour, plus an effect or two
    (a chase around the monitors in order, which also checks the mapping, and a rainbow).
-4. **All monitors and sticks**: per-monitor capture driven by the stick mapping, smoothing,
+4. **All monitors and sticks**: per-monitor capture driven by the stick mapping and smoothing
+   (`ambimote ambient`, done); still to do:
    gamma and white balance.
 5. **Measure while gaming**: CPU use and frame times with AmbiMote on and off (PresentMon or the
    GPU vendor's overlay).
-6. **Desktop app**: tray icon, settings, identify mode, start with Windows, turn off when the PC
-   locks or the monitors sleep, reconnect when a Mote host is unplugged and plugged back in.
+6. **Desktop app**: tray icon and menu, mode and settings window, start with Windows, start minimised,
+   minimise to tray, and reconnecting when a Mote host is unplugged and plugged back in (done); still to do:
+   identify mode, and turning off when the PC locks or the monitors sleep.
 7. **Optional**: MQTT control (on/off, brightness, mode) for Home Assistant.
 
 ## Stick mapping (step 3)

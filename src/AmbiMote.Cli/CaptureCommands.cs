@@ -4,7 +4,9 @@ using System.Text.Json;
 
 using AmbiMote.Core;
 using AmbiMote.Core.Capture;
+using AmbiMote.Core.Config;
 using AmbiMote.Core.Mote;
+using AmbiMote.Core.Processing;
 using AmbiMote.Core.Sampling;
 
 using SharpGen.Runtime;
@@ -113,6 +115,190 @@ internal static class CaptureCommands
                 return ExitCodes.Error;
             }
         });
+        return command;
+    }
+
+    public static Command CreateAmbientCommand()
+    {
+        var smoothing = new Option<double>("--smoothing")
+        {
+            Description = "Seconds for the colours to get most of the way to a new screen colour. 0 follows at once.",
+            DefaultValueFactory = _ => 0.15,
+        };
+        var depth = new Option<double>("--depth")
+        {
+            Description = "How far into the screen to sample, as a fraction of its width or height.",
+            DefaultValueFactory = _ => 0.1,
+        };
+        var fps = new Option<int>("--fps") { Description = "Most updates per second.", DefaultValueFactory = _ => 30 };
+        var stats = new Option<bool>("--stats") { Description = "Every second, print how many frames were captured and sent, and the time spent." };
+        var duration = new Option<double?>("--duration") { Description = "Stop after this many seconds, instead of waiting for Ctrl+C." };
+        var gamma = new Option<double>("--gamma")
+        {
+            Description = "Gamma correction, from 0.5 to 4. Higher makes dark colours dimmer; 1 sends screen values unchanged.",
+            DefaultValueFactory = _ => ColourProcessor.DefaultGamma,
+        };
+        var saturation = new Option<double>("--saturation")
+        {
+            Description = "Colour strength, from 0 (grey) to 3. More than 1 makes up for edges averaging towards grey.",
+            DefaultValueFactory = _ => ColourProcessor.DefaultSaturation,
+        };
+        gamma.Validators.Add(static result =>
+        {
+            if (result.GetValueOrDefault<double>() is < 0.5 or > 4)
+            {
+                result.AddError("--gamma must be between 0.5 and 4.");
+            }
+        });
+        saturation.Validators.Add(static result =>
+        {
+            if (result.GetValueOrDefault<double>() is < 0 or > 3)
+            {
+                result.AddError("--saturation must be between 0 and 3.");
+            }
+        });
+        smoothing.Validators.Add(static result =>
+        {
+            if (result.GetValueOrDefault<double>() is < 0 or > 10)
+            {
+                result.AddError("--smoothing must be between 0 and 10.");
+            }
+        });
+        depth.Validators.Add(static result =>
+        {
+            if (result.GetValueOrDefault<double>() is <= 0 or > 1)
+            {
+                result.AddError("--depth must be more than 0 and at most 1.");
+            }
+        });
+        fps.Validators.Add(static result =>
+        {
+            if (result.GetValueOrDefault<int>() is < 1 or > 60)
+            {
+                result.AddError("--fps must be between 1 and 60.");
+            }
+        });
+        duration.Validators.Add(static result =>
+        {
+            if (result.GetValueOrDefault<double?>() is <= 0)
+            {
+                result.AddError("--duration must be more than 0.");
+            }
+        });
+
+        var command = new Command(
+            "ambient",
+            "Light every stick in the config from the edge of the monitor it sits behind, until Ctrl+C, then turn them off.")
+        {
+            smoothing, depth, gamma, saturation, fps, stats, duration,
+            HostCommands.PortOption, HostCommands.BrightnessOption, HostCommands.MaxCurrentOption,
+        };
+        command.SetAction((parseResult, cancellationToken) => HostCommands.RunOnHosts(parseResult, cancellationToken, async (hosts, token) =>
+        {
+            if (!ConfigCommands.TryLoad(out var config, required: true))
+            {
+                return ExitCodes.Config;
+            }
+
+            var setup = SetupResolver.Resolve(config!, [.. hosts.Select(static h => h.Info)], DisplayOutput.List());
+            foreach (string problem in setup.Problems)
+            {
+                Console.Error.WriteLine($"Warning: {problem}");
+            }
+
+            if (setup.Sticks.Count == 0)
+            {
+                Console.Error.WriteLine("None of the sticks in the config can be used.");
+                return ExitCodes.NoDevice;
+            }
+
+            var byInfo = hosts.ToDictionary(static h => h.Info, static h => h.Host);
+            var monitors = new List<AmbientMonitor>();
+            try
+            {
+                foreach (var group in setup.Sticks.GroupBy(static s => s.Monitor.DeviceName, StringComparer.OrdinalIgnoreCase))
+                {
+                    DesktopDuplicationCapture capture;
+                    try
+                    {
+                        capture = DesktopDuplicationCapture.Open(group.Key);
+                    }
+                    catch (Exception ex) when (ex is ArgumentException or NotSupportedException or SharpGenException)
+                    {
+                        Console.Error.WriteLine($"Warning: could not capture {group.Key}, so its sticks stay off: {ex.Message}");
+                        continue;
+                    }
+
+                    monitors.Add(new AmbientMonitor(
+                        capture,
+                        [.. group.Select(s => new AmbientStick(byInfo[s.Host], s.Stick.Channel, s.Stick.Edge, s.Stick.From, s.Stick.To))]));
+                }
+
+                if (monitors.Count == 0)
+                {
+                    Console.Error.WriteLine("Could not capture any of the monitors in the config.");
+                    return ExitCodes.Error;
+                }
+
+                var mirror = new AmbientMirror(
+                    monitors,
+                    parseResult.GetValue(smoothing),
+                    parseResult.GetValue(depth),
+                    new ColourProcessor(parseResult.GetValue(gamma), parseResult.GetValue(saturation)));
+                int stickCount = monitors.Sum(static m => m.Sticks.Count);
+                Console.WriteLine($"Lighting {stickCount} sticks from {monitors.Count} monitors. Press Ctrl+C to stop.");
+
+                using var stop = CancellationTokenSource.CreateLinkedTokenSource(token);
+                if (parseResult.GetValue(duration) is { } seconds)
+                {
+                    stop.CancelAfter(TimeSpan.FromSeconds(seconds));
+                }
+
+                bool showStats = parseResult.GetValue(stats);
+                using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1.0 / parseResult.GetValue(fps)));
+                var clock = Stopwatch.StartNew();
+                var second = Stopwatch.StartNew();
+                var busy = new Stopwatch();
+                double last = 0;
+                int ticks = 0, captured = 0, sent = 0;
+                try
+                {
+                    while (await timer.WaitForNextTickAsync(stop.Token))
+                    {
+                        double now = clock.Elapsed.TotalSeconds;
+                        busy.Start();
+                        var update = mirror.Update(now - last);
+                        busy.Stop();
+                        last = now;
+                        ticks++;
+                        captured += update.Captured;
+                        sent += update.Sent;
+                        if (showStats && second.ElapsedMilliseconds >= 1000)
+                        {
+                            Console.WriteLine(
+                                $"{ticks} ticks, {captured} monitor frames captured, {sent} host frames sent, {busy.Elapsed.TotalMilliseconds / ticks:0.00} ms per tick");
+                            ticks = captured = sent = 0;
+                            busy.Reset();
+                            second.Restart();
+                        }
+                    }
+                }
+                catch (Exception ex) when (ex is NotSupportedException or SharpGenException)
+                {
+                    Console.Error.WriteLine($"Screen capture failed: {ex.Message}");
+                    return ExitCodes.Error;
+                }
+            }
+            finally
+            {
+                foreach (var monitor in monitors)
+                {
+                    monitor.Capture.Dispose();
+                }
+            }
+
+            return ExitCodes.Success;
+        }));
         return command;
     }
 

@@ -30,6 +30,16 @@ public class PowerLimitTests
     }
 
     [Fact]
+    public void Apply_BrightnessIsAFractionOfWhatTheBudgetAllows()
+    {
+        var full = PowerLimit.Apply(Sticks(Rgb.White), 1.0, maxMilliamps: 400);
+        var half = PowerLimit.Apply(Sticks(Rgb.White), 0.5, maxMilliamps: 400);
+
+        Assert.InRange(PowerLimit.EstimateMilliamps(half), 190, 200);
+        Assert.True(half[0]![0].R < full[0]![0].R);
+    }
+
+    [Fact]
     public void Apply_LeavesFramesWithinTheBudgetAlone()
     {
         var input = Sticks(new Rgb(10, 0, 0));

@@ -34,31 +34,34 @@ public static class PowerLimit
     }
 
     /// <summary>
-    /// Scales every pixel by <paramref name="brightness"/>, then further if the result would draw
-    /// more than <paramref name="maxMilliamps"/>. Returns new arrays; the input is not changed.
+    /// What to multiply every component by. <paramref name="brightness"/> is a fraction of the brightest the budget
+    /// allows: 1 is as bright as the pixels can be within <paramref name="maxMilliamps"/>, 0.5 half that. So the whole
+    /// brightness range does something, even when the budget only allows a fraction of full brightness.
+    /// </summary>
+    public static double Factor(IEnumerable<Rgb[]?> channels, double brightness, double? maxMilliamps)
+    {
+        brightness = Math.Clamp(brightness, 0.0, 1.0);
+        if (maxMilliamps is not { } budget)
+        {
+            return brightness;
+        }
+
+        double estimate = EstimateMilliamps(channels);
+        return estimate <= budget ? brightness : brightness * Math.Max(budget, 0.0) / estimate;
+    }
+
+    /// <summary>
+    /// Scales every pixel by <see cref="Factor"/>, rounding down when the budget is what limits it, so the result
+    /// never goes over. Returns new arrays; the input is not changed.
     /// </summary>
     public static Rgb[]?[] Apply(IReadOnlyList<Rgb[]?> channels, double brightness, double? maxMilliamps)
     {
         ArgumentNullException.ThrowIfNull(channels);
-        brightness = Math.Clamp(brightness, 0.0, 1.0);
-
-        var scaled = channels.Select(c => c?.Select(p => p.Scale(brightness)).ToArray()).ToArray();
-        if (maxMilliamps is not { } budget)
-        {
-            return scaled;
-        }
-
-        double estimate = EstimateMilliamps(scaled);
-        if (estimate <= budget)
-        {
-            return scaled;
-        }
-
-        double factor = Math.Max(budget, 0.0) / estimate;
-        return scaled.Select(c => c?.Select(p => ScaleDown(p, factor)).ToArray()).ToArray();
+        double factor = Factor(channels, brightness, maxMilliamps);
+        bool limited = factor < Math.Clamp(brightness, 0.0, 1.0);
+        return [.. channels.Select(c => c?.Select(p => limited ? ScaleDown(p, factor) : p.Scale(factor)).ToArray())];
     }
 
-    // Rounds down, so the result never goes over the budget.
     private static Rgb ScaleDown(Rgb pixel, double factor) =>
         new((byte)(pixel.R * factor), (byte)(pixel.G * factor), (byte)(pixel.B * factor));
 }

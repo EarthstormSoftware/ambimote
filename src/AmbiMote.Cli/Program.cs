@@ -18,6 +18,7 @@ root.Subcommands.Add(ConfigCommands.CreateConfigCommand());
 root.Subcommands.Add(CaptureCommands.CreateMonitorsCommand());
 root.Subcommands.Add(CaptureCommands.CreateSnapshotCommand());
 root.Subcommands.Add(CaptureCommands.CreateRunCommand());
+root.Subcommands.Add(CaptureCommands.CreateAmbientCommand());
 
 var parseResult = root.Parse(args);
 int exitCode = await parseResult.InvokeAsync();

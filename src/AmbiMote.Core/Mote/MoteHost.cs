@@ -66,8 +66,50 @@ public sealed class MoteHost(IMoteTransport transport) : IDisposable
 
     public void Clear() => FillAll(Rgb.Black);
 
+    /// <summary>
+    /// Rounds each LED a little differently, so when the scaled colours fall between two of the 256 levels some LEDs
+    /// show the level above and some the level below. On the wall the light blends, so dim colours and slow fades
+    /// move in steps about a sixty-fourth the size. Each LED's rounding is fixed, so nothing flickers.
+    /// </summary>
+    /// <remarks>
+    /// This matters most when the power limit keeps the LEDs near the bottom of their range: a fade might otherwise
+    /// only have a dozen levels to move through.
+    /// </remarks>
+    public bool Dither { get; set; }
+
     /// <summary>Sends the pixels to the sticks, after applying <see cref="Brightness"/> and <see cref="MaxMilliamps"/>.</summary>
-    public void Show() => _transport.Write(MoteProtocol.Output(PowerLimit.Apply(_channels, Brightness, MaxMilliamps)));
+    public void Show()
+    {
+        if (!Dither)
+        {
+            _transport.Write(MoteProtocol.Output(PowerLimit.Apply(_channels, Brightness, MaxMilliamps)));
+            return;
+        }
+
+        double factor = PowerLimit.Factor(_channels, Brightness, MaxMilliamps);
+        var output = new Rgb[]?[_channels.Length];
+        int led = 0;
+        for (int c = 0; c < _channels.Length; c++)
+        {
+            if (_channels[c] is not { } pixels)
+            {
+                continue;
+            }
+
+            var frame = new Rgb[pixels.Length];
+            for (int i = 0; i < pixels.Length; i++, led++)
+            {
+                frame[i] = new Rgb(
+                    Dithered(pixels[i].R * factor, led, 0),
+                    Dithered(pixels[i].G * factor, led, 1),
+                    Dithered(pixels[i].B * factor, led, 2));
+            }
+
+            output[c] = frame;
+        }
+
+        _transport.Write(MoteProtocol.Output(output));
+    }
 
     /// <summary>Turns every configured stick off.</summary>
     public void Off()
@@ -77,4 +119,15 @@ public sealed class MoteHost(IMoteTransport transport) : IDisposable
     }
 
     public void Dispose() => _transport.Dispose();
+
+    /// <summary>
+    /// Rounds up once the fraction passes this LED's threshold. The thresholds follow the golden ratio, which spreads
+    /// them evenly however many LEDs there are, so neighbouring LEDs step up at different moments.
+    /// </summary>
+    private static byte Dithered(double exact, int led, int component)
+    {
+        const double goldenRatio = 0.6180339887498949;
+        double threshold = ((led * goldenRatio) + (component * 0.381966)) % 1.0;
+        return (byte)Math.Clamp(Math.Floor(exact + threshold), 0, 255);
+    }
 }

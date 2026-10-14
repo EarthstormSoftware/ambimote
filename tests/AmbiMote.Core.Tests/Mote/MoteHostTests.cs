@@ -17,6 +17,47 @@ public class MoteHostTests
         public void Dispose() => Disposed = true;
     }
 
+    /// <summary>The red value of every LED on channel 1 in a frame: output is "mote", 'o', then blue, green, red.</summary>
+    private static byte[] Reds(byte[] frame, int count = 16) => [.. Enumerable.Range(0, count).Select(i => frame[5 + (i * 3) + 2])];
+
+    [Fact]
+    public void Show_WithDither_SpreadsInBetweenLevelsAcrossTheLeds()
+    {
+        var transport = new RecordingTransport();
+        using var host = new MoteHost(transport) { Brightness = 0.25, MaxMilliamps = null, Dither = true };
+        host.ConfigureChannel(1);
+        host.Fill(1, new Rgb(6, 0, 0));
+
+        host.Show();
+        host.Show();
+
+        // 6 x 0.25 = 1.5: some LEDs at 1 and some at 2, averaging 1.5, and the same every frame so nothing flickers.
+        var reds = Reds(transport.Writes[^1]);
+        Assert.All(reds, static r => Assert.InRange(r, (byte)1, (byte)2));
+        Assert.InRange(reds.Average(static r => r), 1.4, 1.6);
+        Assert.Equal(reds, Reds(transport.Writes[^2]));
+    }
+
+    [Fact]
+    public void Show_WithDither_BrighteningStepsUpOneLedAtATime()
+    {
+        var transport = new RecordingTransport();
+        using var host = new MoteHost(transport) { MaxMilliamps = null, Dither = true };
+        host.ConfigureChannel(1);
+        host.Fill(1, new Rgb(255, 0, 0));
+        int previous = 0;
+
+        // A slow fade from level 1 to 2: the total rises steadily, never jumping all sixteen LEDs at once.
+        for (int step = 0; step <= 32; step++)
+        {
+            host.Brightness = (1 + (step / 32.0)) / 255;
+            host.Show();
+            int total = Reds(transport.Writes[^1]).Sum(static r => r);
+            Assert.InRange(total - previous, step == 0 ? total : 0, step == 0 ? total : 2);
+            previous = total;
+        }
+    }
+
     [Fact]
     public void IsOpen_FollowsTheTransport()
     {
