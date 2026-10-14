@@ -16,7 +16,6 @@
 6. **Desktop app** *(done)*: tray icon and menu, mode and settings window, start with Windows, start minimised,
    minimise to tray, reconnecting when a Mote host is unplugged and plugged back in, identify mode, and
    turning off while the PC is locked or the monitors are off.
-7. **Optional**: MQTT control (on/off, brightness, mode) for Home Assistant.
 
 ## Stick mapping (step 3)
 

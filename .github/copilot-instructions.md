@@ -27,7 +27,7 @@ AmbiMote runs while games are running, so it must stay cheap:
 
 ## Public Repository Rules
 - This repository is public. Never commit personal setup details: USB serial numbers,
-  monitor device IDs, MQTT hostnames, IP addresses, usernames or credentials.
+  monitor device IDs, hostnames, IP addresses, usernames or credentials.
 - Real settings live in a per-user config outside the repo (under `%APPDATA%\AmbiMote`).
   Only `*.example.json` files are committed.
 - Commit messages use Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `test:`).
