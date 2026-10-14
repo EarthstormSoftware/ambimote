@@ -498,6 +498,67 @@
                         </Grid>
                     </Border>
 
+                    <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Automatic mode" />
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Glyph="&#xE740;" Style="{StaticResource CardIconStyle}" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Full screen" />
+                                    <TextBlock
+                                        Style="{StaticResource CardDescriptionStyle}"
+                                        Text="While a game or video fills the screen and is in front"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ComboBox
+                                    x:Name="FullScreenModeBox"
+                                    Grid.Column="2"
+                                    MinWidth="150"
+                                    Margin="12,0,0,0"
+                                    VerticalAlignment="Center"
+                                    SelectionChanged="FullScreenModeBox_SelectionChanged" />
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Glyph="&#xE71D;" Style="{StaticResource CardIconStyle}" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Programs" />
+                                    <TextBlock
+                                        Style="{StaticResource CardDescriptionStyle}"
+                                        Text="A mode of their own while they are in front, full screen or not"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel x:Name="AppRuleRows" Margin="36,0,0,0" Spacing="4" />
+                            <Grid Margin="36,0,0,0" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ComboBox
+                                    x:Name="AddAppBox"
+                                    HorizontalAlignment="Stretch"
+                                    DropDownOpened="AddAppBox_DropDownOpened"
+                                    IsEditable="True"
+                                    PlaceholderText="Program, such as game.exe" />
+                                <Button Grid.Column="1" Click="AddApp_Click" Content="Add" />
+                            </Grid>
+                            <TextBlock
+                                Margin="36,0,0,0"
+                                Style="{StaticResource CardDescriptionStyle}"
+                                Text="The mode goes back afterwards, unless you change it meanwhile. Lights you turned off stay off."
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Keyboard shortcuts" />
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel Spacing="8">

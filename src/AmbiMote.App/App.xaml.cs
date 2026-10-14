@@ -25,6 +25,7 @@ public partial class App : Application
     private ScreenStateWatcher _screens = null!;
     private ControlServer _control = null!;
     private HotkeyManager _hotkeys = null!;
+    private AutoModeWatcher _autoMode = null!;
     private RegisteredWaitHandle? _showRegistration;
     private MainWindow? _window;
     private bool _exiting;
@@ -56,6 +57,8 @@ public partial class App : Application
         _tray.Clicked += (_, _) => ShowWindow();
         _screens = new ScreenStateWatcher();
         _screens.Changed += (_, _) => UpdatePaused();
+        _autoMode = new AutoModeWatcher(_store, _screens, _dispatcher);
+        _autoMode.Changed += (_, _) => UpdateTray();
         _hotkeys = new HotkeyManager();
         _hotkeys.Pressed += (_, action) => Run(HotkeySettings.CommandFor(action));
         _hotkeys.Apply(_store.Current.Hotkeys);
@@ -100,7 +103,7 @@ public partial class App : Application
 
         if (_window is null)
         {
-            _window = new MainWindow(_store, new StartupRegistration(), _engine, _hotkeys, _iconOn);
+            _window = new MainWindow(_store, new StartupRegistration(), _engine, _hotkeys, _autoMode, _iconOn);
             _window.ReconnectRequested += (_, _) => _engine.Reconnect();
             _window.AppWindow.Closing += (_, e) =>
             {
@@ -138,6 +141,8 @@ public partial class App : Application
 
         // Not waited for: a request in flight is waiting for this thread, and the pipe closes with the process anyway.
         _ = _control.DisposeAsync().AsTask();
+        _autoMode.Release();
+        _autoMode.Dispose();
         _engine.Dispose();
         _store.Flush();
         _hotkeys.Dispose();
@@ -225,7 +230,8 @@ public partial class App : Application
     {
         var status = _engine.Status;
         _tray.SetIcon(status.State is EngineState.Running or EngineState.Identifying ? _iconOn : _iconOff);
-        string text = $"AmbiMote: {ModeName(_store.Current.Lighting.Mode)}" + (status.State == EngineState.Off ? "" : $"\n{status.Message}");
+        string mode = ModeName(_store.Current.Lighting.Mode) + (_autoMode.Reason is { } reason ? $" (automatic, for {reason})" : "");
+        string text = $"AmbiMote: {mode}" + (status.State == EngineState.Off ? "" : $"\n{status.Message}");
         _tray.SetTooltip(text.Length <= 127 ? text : string.Concat(text.AsSpan(0, 126), "…"));
     }
 

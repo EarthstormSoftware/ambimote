@@ -36,6 +36,9 @@ public sealed partial class MainWindow : Window
 
     private static readonly (string Name, int Kelvin)[] s_whites = [("Candle", 1900), ("Warm", 2700), ("Neutral", 4000), ("Daylight", 6500)];
 
+    /// <summary>The modes a rule can switch to, in the order the lists show them.</summary>
+    private static readonly LightingMode[] s_ruleModes = [LightingMode.Light, LightingMode.Colour, LightingMode.Effect, LightingMode.Ambient, LightingMode.Off];
+
     private static readonly (HotkeyAction Action, string Label)[] s_hotkeyLabels =
     [
         (HotkeyAction.Toggle, "Lights on or off"),
@@ -63,6 +66,8 @@ public sealed partial class MainWindow : Window
     private readonly StickPreview _preview;
     private readonly DispatcherQueueTimer _previewTimer;
     private readonly HotkeyManager _hotkeys;
+    private readonly AutoModeWatcher _autoMode;
+    private IReadOnlyList<AppModeRule>? _shownRules;
     private readonly Dictionary<HotkeyAction, Button> _hotkeyButtons = [];
 
     /// <summary>The shortcut being recorded, if any: its button is waiting for keys.</summary>
@@ -71,12 +76,13 @@ public sealed partial class MainWindow : Window
     /// <summary>The key that finished a recording, whose release must not click the button and start again.</summary>
     private VirtualKey? _recordedKey;
 
-    internal MainWindow(SettingsStore store, StartupRegistration startup, LightingEngine engine, HotkeyManager hotkeys, string iconPath)
+    internal MainWindow(SettingsStore store, StartupRegistration startup, LightingEngine engine, HotkeyManager hotkeys, AutoModeWatcher autoMode, string iconPath)
     {
         _store = store;
         _engine = engine;
         _startup = startup;
         _hotkeys = hotkeys;
+        _autoMode = autoMode;
 
         // Loading the XAML sets each slider's minimum, which raises ValueChanged; ignore that until the settings are shown.
         _updating = true;
@@ -111,6 +117,12 @@ public sealed partial class MainWindow : Window
         BuildSwatches(ColourSwatches);
         BuildSwatches(EffectSwatches);
         BuildHotkeyRows();
+        FullScreenModeBox.Items.Add("Don't change");
+        foreach (var mode in s_ruleModes)
+        {
+            FullScreenModeBox.Items.Add(App.ModeName(mode));
+        }
+
 
         UpdateControls();
         ShowStatus(engine.Status);
@@ -120,6 +132,7 @@ public sealed partial class MainWindow : Window
         _previewTimer.Tick += (_, _) => _preview.Show(_engine.Preview);
         _store.Changed += (_, _) => UpdateControls();
         _hotkeys.Changed += (_, _) => ShowHotkeyProblems();
+        _autoMode.Changed += (_, _) => UpdateControls();
         Activated += (_, e) =>
         {
             if (e.WindowActivationState == WindowActivationState.Deactivated)
@@ -297,7 +310,8 @@ public sealed partial class MainWindow : Window
             }
 
             LightsSwitch.IsOn = on;
-            LightsDescription.Text = on ? $"{App.ModeName(lighting.Mode)} mode" : $"Off. Turning on goes back to {App.ModeName(page)}.";
+            string automatic = _autoMode.Reason is { } reason ? $", automatically for {reason}" : "";
+            LightsDescription.Text = on ? $"{App.ModeName(lighting.Mode)} mode{automatic}" : $"Off. Turning on goes back to {App.ModeName(page)}.";
             BrightnessSlider.Value = Math.Round(lighting.Brightness * 100);
             BrightnessSlider.IsEnabled = on;
             BrightnessValue.Text = $"{Math.Round(lighting.Brightness * 100)}%";
@@ -335,6 +349,8 @@ public sealed partial class MainWindow : Window
             StartMinimisedSwitch.IsOn = settings.StartMinimised;
             MinimiseToTraySwitch.IsOn = settings.MinimiseToTray;
             PauseWhenAwaySwitch.IsOn = settings.PauseWhenAway;
+            FullScreenModeBox.SelectedIndex = settings.AutoMode.FullScreen is { } fullScreen ? Array.IndexOf(s_ruleModes, fullScreen) + 1 : 0;
+            ShowAppRules(settings.AutoMode.Apps);
             HotkeysSwitch.IsOn = settings.Hotkeys.Enabled;
             foreach (var (action, button) in _hotkeyButtons)
             {
@@ -672,5 +688,84 @@ public sealed partial class MainWindow : Window
         }
 
         return modifiers;
+    }
+
+    private void FullScreenModeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_updating && FullScreenModeBox.SelectedIndex >= 0)
+        {
+            LightingMode? mode = FullScreenModeBox.SelectedIndex == 0 ? null : s_ruleModes[FullScreenModeBox.SelectedIndex - 1];
+            _store.Update(s => s with { AutoMode = s.AutoMode with { FullScreen = mode } });
+        }
+    }
+
+    /// <summary>One row per program rule. Only rebuilt when the rules change, so a list being used is not replaced.</summary>
+    private void ShowAppRules(IReadOnlyList<AppModeRule> rules)
+    {
+        if (_shownRules is not null && _shownRules.SequenceEqual(rules))
+        {
+            return;
+        }
+
+        _shownRules = rules;
+        AppRuleRows.Children.Clear();
+        foreach (var rule in rules)
+        {
+            var row = new Grid { ColumnSpacing = 8 };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.Children.Add(new TextBlock { Text = rule.App, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis });
+
+            var modeBox = new ComboBox { MinWidth = 150 };
+            foreach (var mode in s_ruleModes)
+            {
+                modeBox.Items.Add(App.ModeName(mode));
+            }
+
+            modeBox.SelectedIndex = Array.IndexOf(s_ruleModes, rule.Mode);
+            modeBox.SelectionChanged += (_, _) =>
+            {
+                if (!_updating && modeBox.SelectedIndex >= 0)
+                {
+                    _store.Update(s => s with { AutoMode = s.AutoMode.WithApp(rule.App, s_ruleModes[modeBox.SelectedIndex]) });
+                }
+            };
+            Grid.SetColumn(modeBox, 1);
+            row.Children.Add(modeBox);
+
+            var remove = new Button { Content = new FontIcon { Glyph = "", FontSize = 14 } };
+            ToolTipService.SetToolTip(remove, $"Remove {rule.App}");
+            remove.Click += (_, _) => _store.Update(s => s with { AutoMode = s.AutoMode.WithoutApp(rule.App) });
+            Grid.SetColumn(remove, 2);
+            row.Children.Add(remove);
+            AppRuleRows.Children.Add(row);
+        }
+
+        AppRuleRows.Visibility = rules.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Offers the programs with a window open, so the one to add can be picked rather than typed.</summary>
+    private void AddAppBox_DropDownOpened(object sender, object e)
+    {
+        var known = _store.Current.AutoMode.Apps.Select(r => r.App).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        AddAppBox.Items.Clear();
+        foreach (string app in ForegroundWindows.RunningApps().Where(a => !known.Contains(a)))
+        {
+            AddAppBox.Items.Add(app);
+        }
+    }
+
+    private void AddApp_Click(object sender, RoutedEventArgs e)
+    {
+        string app = AutoModeSettings.NormaliseApp(AddAppBox.Text ?? "");
+        if (app.Length == 0)
+        {
+            return;
+        }
+
+        _store.Update(s => s with { AutoMode = s.AutoMode.WithApp(app, LightingMode.Ambient) });
+        AddAppBox.Text = "";
+        AddAppBox.SelectedIndex = -1;
     }
 }

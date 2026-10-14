@@ -16,8 +16,8 @@
 6. **Desktop app** *(done)*: tray icon and menu, mode and settings window, start with Windows, start minimised,
    minimise to tray, reconnecting when a Mote host is unplugged and plugged back in, identify mode, and
    turning off while the PC is locked or the monitors are off.
-7. **Local integrations**: control the running app from the command line (`ambimote app`, through a named
-   pipe that only the signed-in user can open; done), global hotkeys (done), and switching mode automatically while a
+7. **Local integrations** *(done)*: control the running app from the command line (`ambimote app`, through a
+   named pipe that only the signed-in user can open), global hotkeys, and switching mode automatically while a
    full-screen app or a chosen program is in front. Nothing listens on the network.
 
 ## Stick mapping (step 3)

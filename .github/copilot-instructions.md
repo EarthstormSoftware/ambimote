@@ -9,7 +9,7 @@ hosts plug in over USB, and no Raspberry Pi is involved.
 - `src/AmbiMote.Core`: all logic. Mote serial protocol and host discovery, power limiting,
   screen capture, edge sampling, stick mapping, colour processing, the lighting engine and the
   local control pipe the app listens on. No UI code.
-- `src/AmbiMote.App`: the WinUI 3 desktop app (tray icon, settings window, hotkeys).
+- `src/AmbiMote.App`: the WinUI 3 desktop app (tray icon, settings window, hotkeys, automatic mode).
 - `src/AmbiMote.Cli`: the `ambimote` command line, for testing hardware, running headless and
   controlling the running app (`ambimote app`).
   Stable exit codes (`ExitCodes.cs`); never renumber them.

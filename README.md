@@ -42,6 +42,11 @@ Keyboard shortcuts work anywhere, even in games: **Ctrl+Alt+Shift+L** turns the 
 **Ctrl+Alt+Shift+M** goes to the next mode, and **Ctrl+Alt+Shift+Up** and **Down** change the brightness. Change
 or turn them off in the settings; if another program already uses one, the settings say so.
 
+**Automatic mode** switches the mode by what is in front: Ambient while a game or video fills the screen (the
+default; choose another mode or none in the settings), or a mode of its own for a program you add, such as a
+game. The mode goes back afterwards, unless you changed it meanwhile, and lights you turned off stay off. A
+quick Alt+Tab or opening AmbiMote itself changes nothing.
+
 The app reopens a Mote host that is unplugged and plugged back in, and **Reconnect** reloads
 `config.json` after you edit it. Its own settings are saved to `%APPDATA%\AmbiMote\settings.json`.
 Only one copy runs at a time; starting it again shows the window. The app and the `ambimote`
