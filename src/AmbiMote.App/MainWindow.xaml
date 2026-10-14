@@ -498,6 +498,41 @@
                         </Grid>
                     </Border>
 
+                    <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Keyboard shortcuts" />
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Glyph="&#xE765;" Style="{StaticResource CardIconStyle}" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="Shortcuts" />
+                                    <TextBlock
+                                        Style="{StaticResource CardDescriptionStyle}"
+                                        Text="Work anywhere, even in games. Click one and press the new keys; Backspace clears it, Esc keeps it."
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ToggleSwitch
+                                    x:Name="HotkeysSwitch"
+                                    Grid.Column="2"
+                                    MinWidth="0"
+                                    OffContent=""
+                                    OnContent=""
+                                    Toggled="HotkeysSwitch_Toggled" />
+                            </Grid>
+                            <StackPanel x:Name="HotkeyRows" Margin="36,0,0,0" Spacing="4" />
+                            <TextBlock
+                                x:Name="HotkeyProblems"
+                                Margin="36,0,0,0"
+                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                Style="{StaticResource CardDescriptionStyle}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
                     <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="About" />
                     <Border Style="{StaticResource CardStyle}">
                         <Grid>

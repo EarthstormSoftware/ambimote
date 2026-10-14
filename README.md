@@ -38,6 +38,10 @@ white at pixel 0, and the status bar names its host and channel and where the ma
 The tray icon's menu switches mode and brightness, and lights up while the sticks are running;
 exit from there.
 
+Keyboard shortcuts work anywhere, even in games: **Ctrl+Alt+Shift+L** turns the lights on or off,
+**Ctrl+Alt+Shift+M** goes to the next mode, and **Ctrl+Alt+Shift+Up** and **Down** change the brightness. Change
+or turn them off in the settings; if another program already uses one, the settings say so.
+
 The app reopens a Mote host that is unplugged and plugged back in, and **Reconnect** reloads
 `config.json` after you edit it. Its own settings are saved to `%APPDATA%\AmbiMote\settings.json`.
 Only one copy runs at a time; starting it again shows the window. The app and the `ambimote`

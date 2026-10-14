@@ -30,6 +30,8 @@ public sealed record AppSettings
     /// <summary>Turn the lights off while the PC is locked or the screens are off, and back on afterwards.</summary>
     public bool PauseWhenAway { get; init; } = true;
 
+    public HotkeySettings Hotkeys { get; init; } = new();
+
     /// <summary>The mode to go back to when the lights are turned on again. Never <see cref="LightingMode.Off"/>.</summary>
     public LightingMode LastMode { get; init; } = new LightingSettings().Mode;
 
@@ -63,7 +65,7 @@ public sealed record AppSettings
     public static AppSettings Parse(string json)
     {
         var settings = JsonSerializer.Deserialize<AppSettings>(json, s_json) ?? new AppSettings();
-        return (settings with { Lighting = settings.Lighting ?? new LightingSettings() }).Normalised();
+        return (settings with { Lighting = settings.Lighting ?? new LightingSettings(), Hotkeys = settings.Hotkeys ?? new HotkeySettings() }).Normalised();
     }
 
     /// <summary>
@@ -76,7 +78,7 @@ public sealed record AppSettings
         var lastMode = lighting.Mode != LightingMode.Off ? lighting.Mode
             : Enum.IsDefined(LastMode) && LastMode != LightingMode.Off ? LastMode
             : new LightingSettings().Mode;
-        return this with { Lighting = lighting, LastMode = lastMode };
+        return this with { Lighting = lighting, LastMode = lastMode, Hotkeys = Hotkeys.Normalised() };
     }
 
     /// <summary>Turns the lights on in <see cref="LastMode"/>, or off.</summary>

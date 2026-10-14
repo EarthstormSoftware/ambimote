@@ -24,6 +24,7 @@ public partial class App : Application
     private TrayIcon _tray = null!;
     private ScreenStateWatcher _screens = null!;
     private ControlServer _control = null!;
+    private HotkeyManager _hotkeys = null!;
     private RegisteredWaitHandle? _showRegistration;
     private MainWindow? _window;
     private bool _exiting;
@@ -55,9 +56,13 @@ public partial class App : Application
         _tray.Clicked += (_, _) => ShowWindow();
         _screens = new ScreenStateWatcher();
         _screens.Changed += (_, _) => UpdatePaused();
+        _hotkeys = new HotkeyManager();
+        _hotkeys.Pressed += (_, action) => Run(HotkeySettings.CommandFor(action));
+        _hotkeys.Apply(_store.Current.Hotkeys);
         _store.Changed += (_, _) =>
         {
             _engine.Apply(_store.Current.Lighting);
+            _hotkeys.Apply(_store.Current.Hotkeys);
             UpdatePaused();
             UpdateTray();
         };
@@ -75,6 +80,11 @@ public partial class App : Application
             _tray.ShowWarning("AmbiMote", problem);
         }
 
+        if (_hotkeys.Problems.Count > 0)
+        {
+            _tray.ShowWarning("AmbiMote shortcuts", string.Join(" ", _hotkeys.Problems) + " Shortcuts can be changed in the settings.");
+        }
+
         if (!_store.Current.StartMinimised)
         {
             ShowWindow();
@@ -90,7 +100,7 @@ public partial class App : Application
 
         if (_window is null)
         {
-            _window = new MainWindow(_store, new StartupRegistration(), _engine, _iconOn);
+            _window = new MainWindow(_store, new StartupRegistration(), _engine, _hotkeys, _iconOn);
             _window.ReconnectRequested += (_, _) => _engine.Reconnect();
             _window.AppWindow.Closing += (_, e) =>
             {
@@ -130,6 +140,7 @@ public partial class App : Application
         _ = _control.DisposeAsync().AsTask();
         _engine.Dispose();
         _store.Flush();
+        _hotkeys.Dispose();
         _screens.Dispose();
         _tray.Dispose();
         _window?.Close();

@@ -18,45 +18,20 @@ internal sealed unsafe partial class ScreenStateWatcher : IDisposable
     /// <summary>Whether the screens are on, off or dimmed; Windows sends it once straight after registering.</summary>
     private static readonly Guid s_consoleDisplayState = new("6FE69556-704A-47A0-8F24-C28D936FDA47");
 
-    private readonly WndProc _wndProc;
-    private readonly string _className = $"AmbiMote.Screen.{Guid.NewGuid():N}";
-    private readonly nint _hwnd;
+    private readonly MessageWindow _window;
     private readonly nint _powerNotification;
     private readonly bool _sessionNotification;
     private bool _disposed;
 
     public ScreenStateWatcher()
     {
-        _wndProc = OnMessage;
-        fixed (char* className = _className)
-        {
-            var windowClass = new WNDCLASSEXW
-            {
-                cbSize = (uint)sizeof(WNDCLASSEXW),
-                lpfnWndProc = Marshal.GetFunctionPointerForDelegate(_wndProc),
-                hInstance = GetModuleHandleW(null),
-                lpszClassName = className,
-            };
-            if (RegisterClassExW(&windowClass) == 0)
-            {
-                throw new InvalidOperationException($"Could not register the screen watcher's window class (error {Marshal.GetLastPInvokeError()}).");
-            }
-
-            _hwnd = CreateWindowExW(0, className, className, 0, 0, 0, 0, 0, 0, 0, windowClass.hInstance, 0);
-        }
-
-        if (_hwnd == 0)
-        {
-            throw new InvalidOperationException($"Could not create the screen watcher's window (error {Marshal.GetLastPInvokeError()}).");
-        }
+        _window = new MessageWindow("Screen", OnMessage);
 
         // If either fails, that change is simply never seen and the lights stay on, as they did before.
-        _sessionNotification = WTSRegisterSessionNotification(_hwnd, NOTIFY_FOR_THIS_SESSION);
+        _sessionNotification = WTSRegisterSessionNotification(_window.Handle, NOTIFY_FOR_THIS_SESSION);
         var guid = s_consoleDisplayState;
-        _powerNotification = RegisterPowerSettingNotification(_hwnd, &guid, DEVICE_NOTIFY_WINDOW_HANDLE);
+        _powerNotification = RegisterPowerSettingNotification(_window.Handle, &guid, DEVICE_NOTIFY_WINDOW_HANDLE);
     }
-
-    private delegate nint WndProc(nint hwnd, uint message, nint wParam, nint lParam);
 
     /// <summary><see cref="IsLocked"/> or <see cref="AreScreensOff"/> changed.</summary>
     public event EventHandler? Changed;
@@ -84,17 +59,13 @@ internal sealed unsafe partial class ScreenStateWatcher : IDisposable
 
         if (_sessionNotification)
         {
-            WTSUnRegisterSessionNotification(_hwnd);
+            WTSUnRegisterSessionNotification(_window.Handle);
         }
 
-        DestroyWindow(_hwnd);
-        fixed (char* className = _className)
-        {
-            UnregisterClassW(className, GetModuleHandleW(null));
-        }
+        _window.Dispose();
     }
 
-    private nint OnMessage(nint hwnd, uint message, nint wParam, nint lParam)
+    private nint? OnMessage(uint message, nint wParam, nint lParam)
     {
         if (message == WM_WTSSESSION_CHANGE && wParam is WTS_SESSION_LOCK or WTS_SESSION_UNLOCK)
         {
@@ -114,7 +85,7 @@ internal sealed unsafe partial class ScreenStateWatcher : IDisposable
             return 1;
         }
 
-        return DefWindowProcW(hwnd, message, wParam, lParam);
+        return null;
     }
 
     private void Set(bool locked, bool screensOff)
@@ -130,50 +101,12 @@ internal sealed unsafe partial class ScreenStateWatcher : IDisposable
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct WNDCLASSEXW
-    {
-        public uint cbSize;
-        public uint style;
-        public nint lpfnWndProc;
-        public int cbClsExtra;
-        public int cbWndExtra;
-        public nint hInstance;
-        public nint hIcon;
-        public nint hCursor;
-        public nint hbrBackground;
-        public char* lpszMenuName;
-        public char* lpszClassName;
-        public nint hIconSm;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
     private struct POWERBROADCAST_SETTING
     {
         public Guid PowerSetting;
         public uint DataLength;
         public byte Data;
     }
-
-    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)]
-    private static partial nint GetModuleHandleW(string? moduleName);
-
-    [LibraryImport("user32.dll", SetLastError = true)]
-    private static partial ushort RegisterClassExW(WNDCLASSEXW* windowClass);
-
-    [LibraryImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool UnregisterClassW(char* className, nint instance);
-
-    [LibraryImport("user32.dll", SetLastError = true)]
-    private static partial nint CreateWindowExW(
-        uint exStyle, char* className, char* windowName, uint style, int x, int y, int width, int height, nint parent, nint menu, nint instance, nint param);
-
-    [LibraryImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool DestroyWindow(nint hwnd);
-
-    [LibraryImport("user32.dll")]
-    private static partial nint DefWindowProcW(nint hwnd, uint message, nint wParam, nint lParam);
 
     [LibraryImport("wtsapi32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

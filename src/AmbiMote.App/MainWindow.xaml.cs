@@ -10,15 +10,19 @@ using AmbiMote.Core.Settings;
 
 using Microsoft.UI;
 using Microsoft.UI.Dispatching;
+using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
 
 using Windows.Graphics;
+using VirtualKey = Windows.System.VirtualKey;
+using Windows.UI.Core;
 
 namespace AmbiMote.App;
 
@@ -31,6 +35,14 @@ public sealed partial class MainWindow : Window
     private static readonly string[] s_swatchNames = ["red", "orange", "yellow", "green", "cyan", "blue", "purple", "magenta", "pink", "white"];
 
     private static readonly (string Name, int Kelvin)[] s_whites = [("Candle", 1900), ("Warm", 2700), ("Neutral", 4000), ("Daylight", 6500)];
+
+    private static readonly (HotkeyAction Action, string Label)[] s_hotkeyLabels =
+    [
+        (HotkeyAction.Toggle, "Lights on or off"),
+        (HotkeyAction.NextMode, "Next mode"),
+        (HotkeyAction.BrightnessUp, "Brighter"),
+        (HotkeyAction.BrightnessDown, "Dimmer"),
+    ];
 
     private static readonly Dictionary<EffectKind, string> s_effectHelp = new()
     {
@@ -50,12 +62,21 @@ public sealed partial class MainWindow : Window
     private readonly LightingEngine _engine;
     private readonly StickPreview _preview;
     private readonly DispatcherQueueTimer _previewTimer;
+    private readonly HotkeyManager _hotkeys;
+    private readonly Dictionary<HotkeyAction, Button> _hotkeyButtons = [];
 
-    internal MainWindow(SettingsStore store, StartupRegistration startup, LightingEngine engine, string iconPath)
+    /// <summary>The shortcut being recorded, if any: its button is waiting for keys.</summary>
+    private HotkeyAction? _recording;
+
+    /// <summary>The key that finished a recording, whose release must not click the button and start again.</summary>
+    private VirtualKey? _recordedKey;
+
+    internal MainWindow(SettingsStore store, StartupRegistration startup, LightingEngine engine, HotkeyManager hotkeys, string iconPath)
     {
         _store = store;
         _engine = engine;
         _startup = startup;
+        _hotkeys = hotkeys;
 
         // Loading the XAML sets each slider's minimum, which raises ValueChanged; ignore that until the settings are shown.
         _updating = true;
@@ -89,6 +110,7 @@ public sealed partial class MainWindow : Window
         BuildWhitePresets();
         BuildSwatches(ColourSwatches);
         BuildSwatches(EffectSwatches);
+        BuildHotkeyRows();
 
         UpdateControls();
         ShowStatus(engine.Status);
@@ -97,6 +119,14 @@ public sealed partial class MainWindow : Window
         _previewTimer.Interval = TimeSpan.FromSeconds(1.0 / 30);
         _previewTimer.Tick += (_, _) => _preview.Show(_engine.Preview);
         _store.Changed += (_, _) => UpdateControls();
+        _hotkeys.Changed += (_, _) => ShowHotkeyProblems();
+        Activated += (_, e) =>
+        {
+            if (e.WindowActivationState == WindowActivationState.Deactivated)
+            {
+                StopRecording();
+            }
+        };
         AppWindow.Changed += AppWindow_Changed;
         Root.Loaded += (_, _) => FitHeight();
     }
@@ -158,6 +188,11 @@ public sealed partial class MainWindow : Window
         if (args.DidVisibilityChange || args.DidPresenterChange)
         {
             SetPreviewRunning(sender.IsVisible && sender.Presenter is not OverlappedPresenter { State: OverlappedPresenterState.Minimized });
+
+            if (!sender.IsVisible)
+            {
+                StopRecording();
+            }
         }
     }
 
@@ -300,6 +335,14 @@ public sealed partial class MainWindow : Window
             StartMinimisedSwitch.IsOn = settings.StartMinimised;
             MinimiseToTraySwitch.IsOn = settings.MinimiseToTray;
             PauseWhenAwaySwitch.IsOn = settings.PauseWhenAway;
+            HotkeysSwitch.IsOn = settings.Hotkeys.Enabled;
+            foreach (var (action, button) in _hotkeyButtons)
+            {
+                button.Content = _recording == action ? "Press the keys..." : settings.Hotkeys.Get(action) ?? "None";
+                button.IsEnabled = settings.Hotkeys.Enabled;
+            }
+
+            ShowHotkeyProblems();
         }
         finally
         {
@@ -491,5 +534,143 @@ public sealed partial class MainWindow : Window
         {
             _store.Update(s => s with { PauseWhenAway = PauseWhenAwaySwitch.IsOn });
         }
+    }
+
+    private void HotkeysSwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!_updating)
+        {
+            _store.Update(s => s with { Hotkeys = s.Hotkeys with { Enabled = HotkeysSwitch.IsOn } });
+        }
+    }
+
+    private void BuildHotkeyRows()
+    {
+        foreach (var (action, label) in s_hotkeyLabels)
+        {
+            var row = new Grid();
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            row.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
+            var button = new Button { MinWidth = 180, HorizontalContentAlignment = HorizontalAlignment.Center };
+            Grid.SetColumn(button, 1);
+            button.Click += (_, _) => StartRecording(action);
+            button.PreviewKeyDown += (_, e) => RecordKey(action, e);
+            button.PreviewKeyUp += (_, e) =>
+            {
+                if (e.Key == _recordedKey)
+                {
+                    e.Handled = true;
+                    _recordedKey = null;
+                }
+            };
+            button.LostFocus += (_, _) => StopRecording();
+            row.Children.Add(button);
+            _hotkeyButtons[action] = button;
+            HotkeyRows.Children.Add(row);
+        }
+    }
+
+    private void ShowHotkeyProblems()
+    {
+        HotkeyProblems.Text = string.Join(Environment.NewLine, _hotkeys.Problems);
+        HotkeyProblems.Visibility = _hotkeys.Problems.Count > 0 && _store.Current.Hotkeys.Enabled ? Visibility.Visible : Visibility.Collapsed;
+        FitHeightSoon();
+    }
+
+    /// <summary>Waits for keys on the shortcut's button. Windows lets go of the shortcuts meanwhile, so they reach it.</summary>
+    private void StartRecording(HotkeyAction action)
+    {
+        _recording = action;
+        _hotkeys.Suspended = true;
+        UpdateControls();
+    }
+
+    private void StopRecording()
+    {
+        if (_recording is null)
+        {
+            return;
+        }
+
+        _recording = null;
+        _hotkeys.Suspended = false;
+        UpdateControls();
+    }
+
+    private void RecordKey(HotkeyAction action, KeyRoutedEventArgs e)
+    {
+        if (_recording != action)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        var modifiers = CurrentModifiers();
+        if (e.Key == VirtualKey.Escape)
+        {
+            StopRecording();
+            return;
+        }
+
+        if (e.Key is VirtualKey.Back or VirtualKey.Delete && modifiers == HotkeyModifiers.None)
+        {
+            SaveRecording(action, null, e.Key);
+            return;
+        }
+
+        // Wait for the key that goes with the modifiers.
+        if (e.Key is VirtualKey.Control or VirtualKey.LeftControl or VirtualKey.RightControl
+            or VirtualKey.Menu or VirtualKey.LeftMenu or VirtualKey.RightMenu
+            or VirtualKey.Shift or VirtualKey.LeftShift or VirtualKey.RightShift
+            or VirtualKey.LeftWindows or VirtualKey.RightWindows)
+        {
+            return;
+        }
+
+        if (!Hotkey.TryCreate(modifiers, (int)e.Key, out var hotkey))
+        {
+            _hotkeyButtons[action].Content = "Add Ctrl, Alt or Win";
+            return;
+        }
+
+        SaveRecording(action, hotkey, e.Key);
+    }
+
+    private void SaveRecording(HotkeyAction action, Hotkey? hotkey, VirtualKey key)
+    {
+        _recordedKey = key;
+        _recording = null;
+        _store.Update(s => s with { Hotkeys = s.Hotkeys.With(action, hotkey) });
+        _hotkeys.Suspended = false;
+        UpdateControls();
+    }
+
+    private static HotkeyModifiers CurrentModifiers()
+    {
+        static bool IsDown(VirtualKey key) => InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(CoreVirtualKeyStates.Down);
+
+        var modifiers = HotkeyModifiers.None;
+        if (IsDown(VirtualKey.Control))
+        {
+            modifiers |= HotkeyModifiers.Ctrl;
+        }
+
+        if (IsDown(VirtualKey.Menu))
+        {
+            modifiers |= HotkeyModifiers.Alt;
+        }
+
+        if (IsDown(VirtualKey.Shift))
+        {
+            modifiers |= HotkeyModifiers.Shift;
+        }
+
+        if (IsDown(VirtualKey.LeftWindows) || IsDown(VirtualKey.RightWindows))
+        {
+            modifiers |= HotkeyModifiers.Win;
+        }
+
+        return modifiers;
     }
 }
