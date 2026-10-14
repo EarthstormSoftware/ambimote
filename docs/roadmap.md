@@ -9,8 +9,9 @@
 3. **Stick mapping and lamp mode** *(done)*: record where each stick is mounted and which way round, then
    use the sticks as ordinary lights, like Pimoroni Plasma: any colour, plus an effect or two
    (a chase around the monitors in order, which also checks the mapping, and a rainbow).
-4. **All monitors and sticks**: per-monitor capture driven by the stick mapping, smoothing,
-   saturation and gamma (`ambimote ambient`, done); still to do: white balance.
+4. **All monitors and sticks**: per-monitor capture driven by the stick mapping, smoothing, sampling depth,
+   saturation and gamma (`ambimote ambient`, done), and taking every colour from one monitor, with the sticks
+   on the monitors beside it extended from it (done, also as a full-screen choice); still to do: white balance.
 5. **Measure while gaming**: CPU use and frame times with AmbiMote on and off (PresentMon or the
    GPU vendor's overlay).
 6. **Desktop app** *(done)*: tray icon and menu, mode and settings window, start with Windows, start minimised,
@@ -19,6 +20,20 @@
 7. **Local integrations** *(done)*: control the running app from the command line (`ambimote app`, through a
    named pipe that only the signed-in user can open), global hotkeys, and switching mode automatically while a
    full-screen app or a chosen program is in front. Nothing listens on the network.
+
+## Next steps (after 1.0)
+
+- **White balance** (step 4): check that white on screen looks white on the wall, with the test cards
+  (four colour blocks along the top, a colour down each side), and add a per-channel correction if not.
+- **Measure while gaming** (step 5): log AmbiMote's CPU and GPU use during a game with its window closed, and
+  compare the game's frame rate with AmbiMote on and off. A rough first look: about 0.5% of a 16-core CPU
+  and under 1% GPU, with the settings window open.
+- **Memory**: the app uses about 260 MB, a lot for something that sits in the tray. Find out how much is WinUI
+  and the live preview, and release the window while it is closed to the tray.
+- **Command line**: give `ambimote ambient` the one-monitor source and extend options the app has.
+- **Full screen on the game's own monitor**: an automatic choice that takes colours from whichever monitor
+  the full-screen window is on, instead of a fixed one.
+- **Install**: a published Release build in a fixed folder (see the README), and maybe an installer later.
 
 ## Stick mapping (step 3)
 

@@ -117,6 +117,18 @@ dotnet build AmbiMote.slnx
 dotnet test AmbiMote.slnx
 ```
 
+## Installing
+
+There is no installer. Publish the app to a folder of its own, run `AmbiMote.exe` from there, and turn on
+**Start with Windows** in its settings, which starts the copy you are running:
+
+```powershell
+dotnet publish src/AmbiMote.App -c Release -o "$env:LOCALAPPDATA\Programs\AmbiMote"
+```
+
+To update, exit AmbiMote from the tray and publish again. Running the app straight from `bin\Debug` works too,
+but then the next build replaces it, and a build fails while it is running.
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).

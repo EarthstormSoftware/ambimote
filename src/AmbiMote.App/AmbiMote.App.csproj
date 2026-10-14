@@ -19,6 +19,8 @@
          start-with-Windows Run key can start it. -->
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!-- Builds the resource index (AmbiMote.pri) and compiled XAML for dotnet publish too, not only for build. -->
+    <EnableMsixTooling>true</EnableMsixTooling>
 
     <!-- Program.cs has its own Main, to allow only one copy to run. -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
