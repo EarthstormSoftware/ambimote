@@ -24,6 +24,12 @@ public enum EngineState
 
     /// <summary>Something needs fixing, such as the config file, before the mode can run.</summary>
     Error,
+
+    /// <summary>Off for now, because <see cref="LightingEngine.Paused"/> is set; the mode comes back when it is cleared.</summary>
+    Paused,
+
+    /// <summary>Lighting one stick at a time to show which is which. See <see cref="LightingEngine.Identify"/>.</summary>
+    Identifying,
 }
 
 /// <summary>What the engine is doing, for the window and the tray icon.</summary>
@@ -32,6 +38,8 @@ public enum EngineState
 public sealed record EngineStatus(EngineState State, string Message, IReadOnlyList<string> Problems)
 {
     public static EngineStatus Off { get; } = new(EngineState.Off, "Off", []);
+
+    public static EngineStatus Paused { get; } = new(EngineState.Paused, "Paused while the PC is locked or the screens are off", []);
 
     public bool Equals(EngineStatus? other) =>
         other is not null && State == other.State && Message == other.Message && Problems.SequenceEqual(other.Problems);
@@ -57,6 +65,12 @@ public sealed class LightingEngine : IDisposable
     internal static readonly TimeSpan SteadyCheck = TimeSpan.FromSeconds(1);
     internal const double RetrySeconds = 3;
 
+    /// <summary>How long <see cref="Identify"/> lights each stick: long enough to look round the back of the monitors.</summary>
+    internal const double IdentifyStepSeconds = 3;
+
+    /// <summary>The least brightness <see cref="Identify"/> uses, so the sticks can be seen even when turned right down.</summary>
+    internal const double IdentifyMinBrightness = 0.16;
+
     private readonly ILightingHardware _hardware;
     private readonly AutoResetEvent _wake = new(false);
     private readonly CancellationTokenSource _stop = new();
@@ -66,6 +80,10 @@ public sealed class LightingEngine : IDisposable
     private Session? _session;
     private double _retryAt = double.NegativeInfinity;
     private volatile bool _reconnect;
+    private volatile bool _paused;
+    private volatile bool _identifyRequested;
+    private volatile bool _stopIdentifying;
+    private double _identifyStart = double.NaN;
     private bool _disposed;
     private LightingPreview? _preview;
     private volatile bool _previewEnabled;
@@ -123,6 +141,37 @@ public sealed class LightingEngine : IDisposable
         _wake.Set();
     }
 
+    /// <summary>
+    /// Turns the sticks off and closes the Mote hosts while true, such as while the PC is locked, without changing the
+    /// settings; the mode comes back when it is false again. Stops <see cref="Identify"/>.
+    /// </summary>
+    public bool Paused
+    {
+        get => _paused;
+        set
+        {
+            _paused = value;
+            _wake.Set();
+        }
+    }
+
+    /// <summary>
+    /// Lights every channel of every Mote host in turn for <see cref="IdentifyStepSeconds"/> each, then goes back to
+    /// the mode, even if that is off. Starts again from the first stick if it is already running.
+    /// </summary>
+    public void Identify()
+    {
+        _identifyRequested = true;
+        _wake.Set();
+    }
+
+    /// <summary>Stops <see cref="Identify"/> early and goes back to the mode.</summary>
+    public void StopIdentifying()
+    {
+        _stopIdentifying = true;
+        _wake.Set();
+    }
+
     /// <summary>Closes the Mote hosts, reloads the config and opens them again, without waiting for the next retry.</summary>
     public void Reconnect()
     {
@@ -163,9 +212,32 @@ public sealed class LightingEngine : IDisposable
             _retryAt = double.NegativeInfinity;
         }
 
-        if (settings.Mode == LightingMode.Off)
+        if (_stopIdentifying)
         {
-            CloseSession(turnOff: true);
+            _stopIdentifying = false;
+            _identifyRequested = false;
+            StopIdentifyingNow();
+        }
+
+        if (_paused)
+        {
+            _identifyRequested = false;
+            StopIdentifyingNow();
+            TurnOff();
+            SetStatus(EngineStatus.Paused);
+            return Timeout.InfiniteTimeSpan;
+        }
+
+        if (_identifyRequested)
+        {
+            _identifyRequested = false;
+            _identifyStart = now;
+        }
+
+        bool identifying = !double.IsNaN(_identifyStart);
+        if (settings.Mode == LightingMode.Off && !identifying)
+        {
+            TurnOff();
             SetStatus(EngineStatus.Off);
             return Timeout.InfiniteTimeSpan;
         }
@@ -198,13 +270,28 @@ public sealed class LightingEngine : IDisposable
                 }
             }
 
-            var (animated, status) = _session.Update(settings, now);
-            SetStatus(status);
-            if (_previewEnabled)
+            if (identifying)
             {
-                Volatile.Write(ref _preview, _session.Snapshot());
+                int step = (int)Math.Floor((now - _identifyStart) / IdentifyStepSeconds);
+                if (step < _session.ChannelCount)
+                {
+                    SetStatus(_session.Identify(step, settings));
+                    UpdatePreview();
+                    return TimeSpan.FromSeconds(_identifyStart + ((step + 1) * IdentifyStepSeconds) - now);
+                }
+
+                StopIdentifyingNow();
+                if (settings.Mode == LightingMode.Off)
+                {
+                    TurnOff();
+                    SetStatus(EngineStatus.Off);
+                    return Timeout.InfiniteTimeSpan;
+                }
             }
 
+            var (animated, status) = _session.Update(settings, now);
+            SetStatus(status);
+            UpdatePreview();
             return !animated ? SteadyCheck : settings.Mode == LightingMode.Effect ? EffectFrameTime : FrameTime;
         }
         catch (Exception ex) when (IsHardwareFailure(ex))
@@ -305,6 +392,31 @@ public sealed class LightingEngine : IDisposable
         }
     }
 
+    /// <summary>Turns the sticks off and closes the hosts on purpose, so turning back on opens them without waiting.</summary>
+    private void TurnOff()
+    {
+        CloseSession(turnOff: true);
+        _retryAt = double.NegativeInfinity;
+    }
+
+    private void UpdatePreview()
+    {
+        if (_previewEnabled && _session is not null)
+        {
+            Volatile.Write(ref _preview, _session.Snapshot());
+        }
+    }
+
+    /// <summary>Ends <see cref="Identify"/>; the session then shows the mode again from scratch.</summary>
+    private void StopIdentifyingNow()
+    {
+        if (!double.IsNaN(_identifyStart))
+        {
+            _identifyStart = double.NaN;
+            _session?.Forget();
+        }
+    }
+
     private void CloseSession(bool turnOff)
     {
         _session?.Close(turnOff);
@@ -343,11 +455,13 @@ public sealed class LightingEngine : IDisposable
         private readonly List<string> _ambientProblems = [];
         private readonly LayoutStick[] _layout;
         private readonly DisplayOutput[] _layoutMonitors;
+        private readonly AmbiMoteConfig? _config;
         private AmbientMirror? _mirror;
         private LightingSettings? _shown;
         private IEffect? _effect;
         private double _effectTime;
         private double _last = double.NaN;
+        private bool _clearAll;
 
         public Session(
             ILightingHardware hardware,
@@ -357,6 +471,7 @@ public sealed class LightingEngine : IDisposable
         {
             _hardware = hardware;
             _hosts = hosts;
+            _config = config;
             _hasConfig = config is not null;
             var byInfo = hosts.ToDictionary(static h => h.Info, static h => h.Host);
             if (config is null)
@@ -412,15 +527,64 @@ public sealed class LightingEngine : IDisposable
         /// <summary>True if the config lists a host that was not plugged in when the session opened.</summary>
         public bool MissingHosts { get; }
 
+        /// <summary>Every channel on every open host: the number of steps <see cref="Identify"/> takes.</summary>
+        public int ChannelCount => _hosts.Count * MoteProtocol.ChannelCount;
+
+        /// <summary>Lights only channel <paramref name="step"/> of all <see cref="ChannelCount"/>, in the identify pattern.</summary>
+        public EngineStatus Identify(int step, LightingSettings settings)
+        {
+            ThrowIfUnplugged();
+            CloseAmbient();
+            _shown = null;
+            var (info, lit) = _hosts[step / MoteProtocol.ChannelCount];
+            int channel = (step % MoteProtocol.ChannelCount) + 1;
+            foreach (var (_, host) in _hosts)
+            {
+                host.Brightness = Math.Max(settings.LedBrightness, IdentifyMinBrightness);
+                host.MaxMilliamps = settings.MaxMilliamps;
+                host.Clear();
+            }
+
+            Lighting.Identify.Light(lit.GetPixels(channel), channel);
+            foreach (var (_, host) in _hosts)
+            {
+                host.Show();
+            }
+
+            string name = _config?.Hosts.FirstOrDefault(c => string.Equals(c.InstanceId, info.InstanceId, StringComparison.OrdinalIgnoreCase)) is { } named
+                ? $"Host \"{named.Id}\" ({info.PortName})"
+                : $"Host {info.PortName}";
+            string where = _mapped.FirstOrDefault(s => s.Host == info && s.Stick.Channel == channel) is { } mapped
+                ? $"mapped to the {mapped.Stick.Edge.ToString().ToLowerInvariant()} of {mapped.Monitor.DeviceName.TrimStart('\\', '.')}"
+                : "not in the stick mapping";
+            return new EngineStatus(
+                EngineState.Identifying,
+                $"{step + 1} of {ChannelCount}: {name}, channel {channel} ({Lighting.Identify.ChannelColourName(channel)}), {where}",
+                [.. _problems]);
+        }
+
+        /// <summary>Forgets what was shown, so the next <see cref="Update"/> sends the mode again from scratch.</summary>
+        public void Forget()
+        {
+            CloseAmbient();
+            _shown = null;
+            _effect = null;
+            _clearAll = true;
+        }
+
         public (bool Animated, EngineStatus Status) Update(LightingSettings settings, double now)
         {
             double elapsed = double.IsNaN(_last) ? 0 : Math.Clamp(now - _last, 0, 1);
             _last = now;
-            foreach (var (_, host) in _hosts)
+            ThrowIfUnplugged();
+            if (_clearAll)
             {
-                if (!host.IsOpen)
+                // Modes only draw the mapped sticks, so blank the rest, which may still show what Identify left.
+                _clearAll = false;
+                foreach (var (_, host) in _hosts)
                 {
-                    throw new IOException("A Mote host was unplugged.");
+                    host.Clear();
+                    host.Show();
                 }
             }
 
@@ -468,6 +632,17 @@ public sealed class LightingEngine : IDisposable
 
                 default:
                     return UpdateAmbient(settings, previous, resend, elapsed);
+            }
+        }
+
+        private void ThrowIfUnplugged()
+        {
+            foreach (var (_, host) in _hosts)
+            {
+                if (!host.IsOpen)
+                {
+                    throw new IOException("A Mote host was unplugged.");
+                }
             }
         }
 

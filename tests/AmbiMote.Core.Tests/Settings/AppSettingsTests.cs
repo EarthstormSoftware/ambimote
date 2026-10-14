@@ -23,6 +23,7 @@ public sealed class AppSettingsTests : IDisposable
         {
             StartMinimised = true,
             MinimiseToTray = false,
+            PauseWhenAway = false,
             Lighting = new LightingSettings { Mode = LightingMode.Effect, Colour = new Rgb(1, 2, 3), Effect = EffectKind.Candle, Kelvin = 3000 },
         };
 
@@ -89,5 +90,6 @@ public sealed class AppSettingsTests : IDisposable
         Assert.Equal(1, loaded.Lighting.Brightness);
         Assert.Equal(new LightingSettings().Kelvin, loaded.Lighting.Kelvin);
         Assert.True(loaded.MinimiseToTray);
+        Assert.True(loaded.PauseWhenAway);
     }
 }

@@ -32,8 +32,11 @@ window picks the mode:
 Every mode page has the on/off switch and brightness. Turning the lights off frees the Mote hosts
 for the `ambimote` command, and turning them on goes back to the last mode. The cog at the bottom
 of the menu holds the settings: start with Windows, start minimised, minimise (or close) to the
-tray, the power limit per host, and the stick mapping file. The tray icon's menu switches mode
-and brightness, and lights up while the sticks are running; exit from there.
+tray, turning the lights off while the PC is locked or the screens are off, the power limit per
+host, and the stick mapping file. **Identify** there lights each stick in turn for a few seconds,
+white at pixel 0, and the status bar names its host and channel and where the mapping puts it.
+The tray icon's menu switches mode and brightness, and lights up while the sticks are running;
+exit from there.
 
 The app reopens a Mote host that is unplugged and plugged back in, and **Reconnect** reloads
 `config.json` after you edit it. Its own settings are saved to `%APPDATA%\AmbiMote\settings.json`.
@@ -72,8 +75,8 @@ plugged into. Keep each host in the same port.
 
 A Mote host with four sticks at full white would want several amps, far more than a USB port
 supplies. AmbiMote estimates the current for every frame and scales it down to stay within a
-budget (400 mA per host by default; change it with `--max-current`). Use a powered USB hub
-if you raise it.
+budget: 500 mA per host by default, which is what a USB 2.0 port guarantees. Change it in the
+app's settings or with `--max-current`, and use a powered USB hub if you raise it.
 
 ## Building
 

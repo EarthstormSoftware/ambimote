@@ -433,6 +433,52 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE708;" Style="{StaticResource CardIconStyle}" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Off while away" />
+                                <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Turn the lights off while the PC is locked or the screens are off" />
+                            </StackPanel>
+                            <ToggleSwitch
+                                x:Name="PauseWhenAwaySwitch"
+                                Grid.Column="2"
+                                MinWidth="0"
+                                OffContent=""
+                                OnContent=""
+                                Toggled="PauseWhenAwaySwitch_Toggled" />
+                        </Grid>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Glyph="&#xE7B3;" Style="{StaticResource CardIconStyle}" />
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="Identify sticks" />
+                                <TextBlock
+                                    Style="{StaticResource CardDescriptionStyle}"
+                                    Text="Lights each stick in turn for 3 seconds, with its white end at pixel 0. The status bar says which it is."
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button
+                                x:Name="IdentifyButton"
+                                Grid.Column="2"
+                                MinWidth="80"
+                                Margin="12,0,0,0"
+                                VerticalAlignment="Center"
+                                Click="IdentifyButton_Click"
+                                Content="Identify" />
+                        </Grid>
+                    </Border>
+                    <Border Style="{StaticResource CardStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
                             <FontIcon Glyph="&#xE7F4;" Style="{StaticResource CardIconStyle}" />
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
                                 <TextBlock Text="Stick mapping" />

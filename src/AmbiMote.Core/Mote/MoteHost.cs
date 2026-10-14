@@ -7,7 +7,7 @@ namespace AmbiMote.Core.Mote;
 public sealed class MoteHost(IMoteTransport transport) : IDisposable
 {
     /// <summary>A safe default for a host powered from a USB 2.0 port.</summary>
-    public const double DefaultMaxMilliamps = 400;
+    public const double DefaultMaxMilliamps = 500;
 
     private readonly IMoteTransport _transport = transport ?? throw new ArgumentNullException(nameof(transport));
     private readonly Rgb[]?[] _channels = new Rgb[]?[MoteProtocol.ChannelCount];

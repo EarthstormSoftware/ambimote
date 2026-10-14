@@ -27,6 +27,9 @@ public sealed record AppSettings
     /// <summary>Hide the window to the tray when it is minimised, instead of keeping it on the taskbar.</summary>
     public bool MinimiseToTray { get; init; } = true;
 
+    /// <summary>Turn the lights off while the PC is locked or the screens are off, and back on afterwards.</summary>
+    public bool PauseWhenAway { get; init; } = true;
+
     /// <summary>The mode to go back to when the lights are turned on again. Never <see cref="LightingMode.Off"/>.</summary>
     public LightingMode LastMode { get; init; } = new LightingSettings().Mode;
 

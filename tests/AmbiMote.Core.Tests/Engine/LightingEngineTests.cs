@@ -1,6 +1,7 @@
 using AmbiMote.Core.Capture;
 using AmbiMote.Core.Config;
 using AmbiMote.Core.Engine;
+using AmbiMote.Core.Lighting;
 using AmbiMote.Core.Mote;
 using AmbiMote.Core.Sampling;
 
@@ -347,6 +348,113 @@ public class LightingEngineTests
         engine.Tick(0);
 
         Assert.Null(engine.Preview);
+    }
+
+    [Fact]
+    public void Paused_TurnsTheSticksOffAndClosesTheHosts_ThenComesBackInTheMode()
+    {
+        var colour = new Rgb(10, 20, 30);
+        var (engine, hardware) = Create(new LightingSettings { Mode = LightingMode.Colour, Colour = colour }, "COM5");
+        engine.Tick(0);
+        var (host, transport) = hardware.Opened["COM5"];
+
+        engine.Paused = true;
+        var wait = engine.Tick(1);
+
+        Assert.Equal(Timeout.InfiniteTimeSpan, wait);
+        Assert.Equal(EngineStatus.Paused, engine.Status);
+        Assert.Equal(LightingMode.Colour, engine.Settings.Mode);
+        Assert.Equal(Rgb.Black, host.GetPixels(1)[0]);
+        Assert.True(transport.Disposed);
+
+        engine.Paused = false;
+        engine.Tick(2);
+
+        Assert.Equal(EngineState.Running, engine.Status.State);
+        Assert.Equal(colour, hardware.Opened["COM5"].Host.GetPixels(1)[0]);
+    }
+
+    [Fact]
+    public void Identify_LightsEachChannelInTurn_ThenGoesBackToTheMode()
+    {
+        var colour = new Rgb(10, 20, 30);
+        var (engine, hardware) = Create(new LightingSettings { Mode = LightingMode.Colour, Colour = colour }, "COM5", "COM6");
+        hardware.Config = OneStickConfig("COM5", "COM6");
+        engine.Tick(0);
+
+        engine.Identify();
+        var wait = engine.Tick(1);
+        var com5 = hardware.Opened["COM5"].Host;
+        var com6 = hardware.Opened["COM6"].Host;
+
+        Assert.Equal(EngineState.Identifying, engine.Status.State);
+        Assert.Equal("1 of 8: Host \"COM5\" (COM5), channel 1 (red), mapped to the top of DISPLAY1", engine.Status.Message);
+        Assert.Equal(TimeSpan.FromSeconds(LightingEngine.IdentifyStepSeconds), wait);
+        Assert.Equal(Rgb.White, com5.GetPixels(1)[0]);
+        Assert.Equal(Identify.ChannelColour(1), com5.GetPixels(1)[1]);
+        Assert.Equal(Rgb.Black, com5.GetPixels(2)[0]);
+        Assert.Equal(Rgb.Black, com6.GetPixels(1)[0]);
+
+        engine.Tick(1 + (6 * LightingEngine.IdentifyStepSeconds));
+
+        Assert.Equal("7 of 8: Host \"COM6\" (COM6), channel 3 (blue), not in the stick mapping", engine.Status.Message);
+        Assert.Equal(Rgb.Black, com5.GetPixels(1)[0]);
+        Assert.Equal(Identify.ChannelColour(3), com6.GetPixels(3)[1]);
+
+        engine.Tick(1 + (8 * LightingEngine.IdentifyStepSeconds));
+
+        Assert.Equal(EngineState.Running, engine.Status.State);
+        Assert.Equal(colour, com5.GetPixels(1)[0]);
+        Assert.Equal(Rgb.Black, com6.GetPixels(3)[0]);
+    }
+
+    [Fact]
+    public void Identify_WhileOff_OpensTheHostsAndClosesThemAgainAfterwards()
+    {
+        var (engine, hardware) = Create(new LightingSettings { Mode = LightingMode.Off }, "COM5");
+        engine.Tick(0);
+        Assert.Empty(hardware.Opened);
+
+        engine.Identify();
+        engine.Tick(1);
+
+        Assert.Equal(EngineState.Identifying, engine.Status.State);
+        Assert.Equal(Rgb.White, hardware.Opened["COM5"].Host.GetPixels(1)[0]);
+
+        var wait = engine.Tick(1 + (4 * LightingEngine.IdentifyStepSeconds));
+
+        Assert.Equal(Timeout.InfiniteTimeSpan, wait);
+        Assert.Equal(EngineStatus.Off, engine.Status);
+        Assert.True(hardware.Opened["COM5"].Transport.Disposed);
+    }
+
+    [Fact]
+    public void StopIdentifying_GoesBackToTheModeStraightAway()
+    {
+        var (engine, hardware) = Create(new LightingSettings { Mode = LightingMode.Light, Kelvin = 2700 }, "COM5");
+        engine.Identify();
+        engine.Tick(0);
+
+        engine.StopIdentifying();
+        engine.Tick(0.5);
+
+        Assert.Equal(EngineState.Running, engine.Status.State);
+        Assert.Equal(Rgb.FromKelvin(2700), hardware.Opened["COM5"].Host.GetPixels(1)[0]);
+    }
+
+    [Fact]
+    public void Paused_StopsIdentifying()
+    {
+        var (engine, _) = Create(new LightingSettings { Mode = LightingMode.Colour }, "COM5");
+        engine.Identify();
+        engine.Tick(0);
+
+        engine.Paused = true;
+        engine.Tick(1);
+        engine.Paused = false;
+        engine.Tick(2);
+
+        Assert.Equal(EngineState.Running, engine.Status.State);
     }
 
     [Fact]

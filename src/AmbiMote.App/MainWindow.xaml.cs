@@ -127,7 +127,7 @@ public sealed partial class MainWindow : Window
     {
         StatusDot.Fill = ThemeBrush(status.State switch
         {
-            EngineState.Running => "SystemFillColorSuccessBrush",
+            EngineState.Running or EngineState.Identifying => "SystemFillColorSuccessBrush",
             EngineState.Waiting => "SystemFillColorCautionBrush",
             EngineState.Error => "SystemFillColorCriticalBrush",
             _ => "SystemFillColorNeutralBrush",
@@ -136,6 +136,8 @@ public sealed partial class MainWindow : Window
         ProblemsButton.Visibility = status.Problems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         ProblemsCount.Text = status.Problems.Count == 1 ? "1 problem" : $"{status.Problems.Count} problems";
         ProblemsText.Text = string.Join(Environment.NewLine + Environment.NewLine, status.Problems);
+        IdentifyButton.Content = status.State == EngineState.Identifying ? "Stop" : "Identify";
+        IdentifyButton.IsEnabled = status.State != EngineState.Paused;
     }
 
     private static Brush ThemeBrush(string key) => (Brush)Application.Current.Resources[key];
@@ -297,6 +299,7 @@ public sealed partial class MainWindow : Window
             StartWithWindowsSwitch.IsOn = _startup.IsEnabled;
             StartMinimisedSwitch.IsOn = settings.StartMinimised;
             MinimiseToTraySwitch.IsOn = settings.MinimiseToTray;
+            PauseWhenAwaySwitch.IsOn = settings.PauseWhenAway;
         }
         finally
         {
@@ -348,6 +351,18 @@ public sealed partial class MainWindow : Window
     }
 
     private void Reconnect_Click(object sender, RoutedEventArgs e) => ReconnectRequested?.Invoke(this, EventArgs.Empty);
+
+    private void IdentifyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_engine.Status.State == EngineState.Identifying)
+        {
+            _engine.StopIdentifying();
+        }
+        else
+        {
+            _engine.Identify();
+        }
+    }
 
     private void BrightnessSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
     {
@@ -467,6 +482,14 @@ public sealed partial class MainWindow : Window
         if (!_updating)
         {
             _store.Update(s => s with { MinimiseToTray = MinimiseToTraySwitch.IsOn });
+        }
+    }
+
+    private void PauseWhenAwaySwitch_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (!_updating)
+        {
+            _store.Update(s => s with { PauseWhenAway = PauseWhenAwaySwitch.IsOn });
         }
     }
 }

@@ -16,14 +16,6 @@ internal static class HostCommands
 
     internal const string ColourError = "Unknown colour. Use a name such as warm or red, a temperature such as 3000k, or hex such as ff8000.";
 
-    private static readonly Rgb[] s_channelColours =
-    [
-        new(255, 0, 0),
-        new(0, 255, 0),
-        new(0, 0, 255),
-        new(255, 160, 0),
-    ];
-
     internal static readonly Option<string[]> PortOption = new("--port", "-p")
     {
         Description = "Only use the Mote host on this serial port, such as COM5. Repeat for several. Default: every Mote host.",
@@ -113,10 +105,10 @@ internal static class HostCommands
                         other.Show();
                     }
 
-                    LightForIdentify(host.GetPixels(channel), s_channelColours[channel - 1]);
+                    Identify.Light(host.GetPixels(channel), channel);
                     host.Show();
                     Console.WriteLine(
-                        $"{info.PortName} (serial {info.SerialNumber ?? "none"}), channel {channel}: {ColourName(channel)}.");
+                        $"{info.PortName} (serial {info.SerialNumber ?? "none"}), channel {channel}: {Identify.ChannelColourName(channel)}.");
                     await WaitForNextAsync(delayMs, token);
                 }
             }
@@ -251,23 +243,6 @@ internal static class HostCommands
             }
         }
     }
-
-    private static void LightForIdentify(Span<Rgb> pixels, Rgb colour)
-    {
-        pixels[0] = Rgb.White;
-        for (int i = 1; i < pixels.Length; i++)
-        {
-            pixels[i] = colour.Scale(1.0 - (0.85 * (i - 1) / Math.Max(1, pixels.Length - 2)));
-        }
-    }
-
-    private static string ColourName(int channel) => channel switch
-    {
-        1 => "red",
-        2 => "green",
-        3 => "blue",
-        _ => "orange",
-    };
 
     private static async Task WaitForNextAsync(int? delayMs, CancellationToken cancellationToken)
     {

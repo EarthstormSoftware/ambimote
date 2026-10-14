@@ -13,9 +13,9 @@
    saturation and gamma (`ambimote ambient`, done); still to do: white balance.
 5. **Measure while gaming**: CPU use and frame times with AmbiMote on and off (PresentMon or the
    GPU vendor's overlay).
-6. **Desktop app**: tray icon and menu, mode and settings window, start with Windows, start minimised,
-   minimise to tray, and reconnecting when a Mote host is unplugged and plugged back in (done); still to do:
-   identify mode, and turning off when the PC locks or the monitors sleep.
+6. **Desktop app** *(done)*: tray icon and menu, mode and settings window, start with Windows, start minimised,
+   minimise to tray, reconnecting when a Mote host is unplugged and plugged back in, identify mode, and
+   turning off while the PC is locked or the monitors are off.
 7. **Optional**: MQTT control (on/off, brightness, mode) for Home Assistant.
 
 ## Stick mapping (step 3)

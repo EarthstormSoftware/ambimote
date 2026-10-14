@@ -21,6 +21,7 @@ public partial class App : Application
     private SettingsStore _store = null!;
     private LightingEngine _engine = null!;
     private TrayIcon _tray = null!;
+    private ScreenStateWatcher _screens = null!;
     private RegisteredWaitHandle? _showRegistration;
     private MainWindow? _window;
     private bool _exiting;
@@ -50,15 +51,19 @@ public partial class App : Application
 
         _tray = new TrayIcon { MenuRequested = BuildMenu };
         _tray.Clicked += (_, _) => ShowWindow();
+        _screens = new ScreenStateWatcher();
+        _screens.Changed += (_, _) => UpdatePaused();
         _store.Changed += (_, _) =>
         {
             _engine.Apply(_store.Current.Lighting);
+            UpdatePaused();
             UpdateTray();
         };
         _engine.StatusChanged += (_, status) => _dispatcher.TryEnqueue(() => OnStatusChanged(status));
         _showRegistration = ThreadPool.RegisterWaitForSingleObject(
             _showRequests, (_, _) => _dispatcher.TryEnqueue(ShowWindow), null, Timeout.Infinite, executeOnlyOnce: false);
 
+        UpdatePaused();
         _engine.Start();
         UpdateTray();
         if (_store.LoadProblem is { } problem)
@@ -118,6 +123,7 @@ public partial class App : Application
         _showRegistration?.Unregister(null);
         _engine.Dispose();
         _store.Flush();
+        _screens.Dispose();
         _tray.Dispose();
         _window?.Close();
         base.Exit();
@@ -146,10 +152,14 @@ public partial class App : Application
         return items;
     }
 
+    /// <summary>Lights off while nobody can see the screens, if the user wants that.</summary>
+    private void UpdatePaused() =>
+        _engine.Paused = _store.Current.PauseWhenAway && (_screens.IsLocked || _screens.AreScreensOff);
+
     private void UpdateTray()
     {
         var status = _engine.Status;
-        _tray.SetIcon(status.State == EngineState.Running ? _iconOn : _iconOff);
+        _tray.SetIcon(status.State is EngineState.Running or EngineState.Identifying ? _iconOn : _iconOff);
         string text = $"AmbiMote: {ModeName(_store.Current.Lighting.Mode)}" + (status.State == EngineState.Off ? "" : $"\n{status.Message}");
         _tray.SetTooltip(text.Length <= 127 ? text : string.Concat(text.AsSpan(0, 126), "…"));
     }
