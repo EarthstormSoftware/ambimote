@@ -29,8 +29,11 @@ namespace AmbiMote.App;
 /// <summary>The settings window: choose the mode, adjust it, and set how AmbiMote starts.</summary>
 public sealed partial class MainWindow : Window
 {
-    /// <summary>The window's size in device-independent pixels: a fixed width, and a height that fits the page.</summary>
-    private const double WindowWidth = 600, CompactPaneWidth = 48, MinHeight = 400;
+    /// <summary>
+    /// The window's size in device-independent pixels: a fixed width, and a height that fits the page up to
+    /// <see cref="MaxHeight"/> (or most of the screen, if that is less), beyond which the page scrolls.
+    /// </summary>
+    private const double WindowWidth = 960, CompactPaneWidth = 48, MinHeight = 400, MaxHeight = 760, MaxScreenFraction = 0.9;
 
     private static readonly string[] s_swatchNames = ["red", "orange", "yellow", "green", "cyan", "blue", "purple", "magenta", "pink", "white"];
 
@@ -225,7 +228,10 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>Makes the window exactly as tall as its content, so each mode gets the room it needs and no more.</summary>
+    /// <summary>
+    /// Makes the window as tall as its content, so each mode gets the room it needs and no more, but no taller than
+    /// <see cref="MaxHeight"/> or most of the screen; the page scrolls beyond that.
+    /// </summary>
     private void FitHeight()
     {
         if (Root.XamlRoot is not { } xamlRoot)
@@ -236,8 +242,10 @@ public sealed partial class MainWindow : Window
         // The page sits beside the compact menu bar, which needs room for its items and the cog.
         Page.Measure(new Windows.Foundation.Size(WindowWidth - CompactPaneWidth, double.PositiveInfinity));
         StatusBarArea.Measure(new Windows.Foundation.Size(WindowWidth, double.PositiveInfinity));
-        double height = Math.Max(MinHeight, AppTitleBar.ActualHeight + Page.DesiredSize.Height + StatusBarArea.DesiredSize.Height);
         double scale = xamlRoot.RasterizationScale;
+        var workArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        double maxHeight = Math.Max(MinHeight, Math.Min(MaxHeight, workArea.Height * MaxScreenFraction / scale));
+        double height = Math.Clamp(AppTitleBar.ActualHeight + Page.DesiredSize.Height + StatusBarArea.DesiredSize.Height, MinHeight, maxHeight);
         AppWindow.ResizeClient(new SizeInt32((int)Math.Ceiling(WindowWidth * scale), (int)Math.Ceiling(height * scale)));
     }
 
@@ -381,6 +389,7 @@ public sealed partial class MainWindow : Window
             _store.Update(l => l with { Mode = mode });
         }
 
+        PageScroller.ChangeView(null, 0, null, disableAnimation: true);
         UpdateControls();
     }
 

@@ -58,232 +58,167 @@
                 </NavigationViewItem>
             </NavigationView.MenuItems>
 
-            <StackPanel
-                x:Name="Page"
-                VerticalAlignment="Top"
-                Padding="20,12,20,20"
-                Spacing="4">
-                <TextBlock
-                    x:Name="PageTitle"
-                    Margin="0,0,0,12"
-                    Style="{StaticResource TitleTextBlockStyle}" />
+            <!-- The page scrolls when it is taller than the window can be. -->
+            <ScrollViewer x:Name="PageScroller" VerticalScrollBarVisibility="Auto">
+                <StackPanel
+                    x:Name="Page"
+                    VerticalAlignment="Top"
+                    Padding="20,12,20,20"
+                    Spacing="4">
+                    <TextBlock
+                        x:Name="PageTitle"
+                        Margin="0,0,0,12"
+                        Style="{StaticResource TitleTextBlockStyle}" />
 
-                <!-- On every mode page: on and off, brightness and what the sticks are doing. -->
-                <StackPanel x:Name="CommonPanel" Margin="0,0,0,8" Spacing="4">
-                    <!-- The sticks around the monitors, in the colours they are showing. -->
-                    <Border Padding="8" Style="{StaticResource CardStyle}">
-                        <Canvas
-                            x:Name="PreviewCanvas"
-                            Height="120"
-                            SizeChanged="PreviewCanvas_SizeChanged" />
-                    </Border>
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel Spacing="8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE7E8;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Lights" />
-                                    <TextBlock x:Name="LightsDescription" Style="{StaticResource CardDescriptionStyle}" />
-                                </StackPanel>
-                                <ToggleSwitch
-                                    x:Name="LightsSwitch"
-                                    Grid.Column="2"
-                                    MinWidth="0"
-                                    OffContent=""
-                                    OnContent=""
-                                    Toggled="LightsSwitch_Toggled" />
-                            </Grid>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE706;" Style="{StaticResource CardIconStyle}" />
-                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Brightness" />
-                                <Slider
-                                    x:Name="BrightnessSlider"
-                                    Grid.Column="2"
-                                    Maximum="100"
-                                    Minimum="1"
-                                    Style="{StaticResource CardSliderStyle}"
-                                    ValueChanged="BrightnessSlider_ValueChanged" />
-                                <TextBlock x:Name="BrightnessValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- Light -->
-                <StackPanel x:Name="LightPanel" Spacing="4">
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel Spacing="12">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xEA80;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Warmth" />
-                                    <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Lower is warmer, higher is cooler" />
-                                </StackPanel>
-                                <Slider
-                                    x:Name="KelvinSlider"
-                                    Grid.Column="2"
-                                    Maximum="6500"
-                                    Minimum="1900"
-                                    StepFrequency="100"
-                                    Style="{StaticResource CardSliderStyle}"
-                                    ValueChanged="KelvinSlider_ValueChanged" />
-                                <TextBlock x:Name="KelvinValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
-                            </Grid>
-                            <StackPanel
-                                x:Name="WhitePresets"
-                                Margin="36,0,0,0"
-                                Orientation="Horizontal"
-                                Spacing="8" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- Colour -->
-                <StackPanel x:Name="ColourPanel" Spacing="4">
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel Spacing="12">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE790;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Colour" />
-                                    <TextBlock x:Name="ColourHex" Style="{StaticResource CardDescriptionStyle}" />
-                                </StackPanel>
-                                <Button Grid.Column="2" Content="More colours">
-                                    <Button.Flyout>
-                                        <Flyout Opening="ColourFlyout_Opening">
-                                            <ColorPicker
-                                                x:Name="ColourPicker"
-                                                ColorChanged="ColourPicker_ColorChanged"
-                                                ColorSpectrumShape="Ring"
-                                                IsAlphaEnabled="False"
-                                                IsColorChannelTextInputVisible="False"
-                                                IsHexInputVisible="True"
-                                                IsMoreButtonVisible="False" />
-                                        </Flyout>
-                                    </Button.Flyout>
-                                </Button>
-                            </Grid>
-                            <StackPanel
-                                x:Name="ColourSwatches"
-                                Margin="36,0,0,0"
-                                Orientation="Horizontal"
-                                Spacing="6" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-
-                <!-- Effect -->
-                <StackPanel x:Name="EffectPanel" Spacing="4">
-                    <Border Style="{StaticResource CardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <FontIcon Glyph="&#xE945;" Style="{StaticResource CardIconStyle}" />
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Effect" />
-                                <TextBlock x:Name="EffectHelp" Style="{StaticResource CardDescriptionStyle}" />
+                    <!-- On every mode page: on and off, brightness and what the sticks are doing. -->
+                    <StackPanel x:Name="CommonPanel" Margin="0,0,0,8" Spacing="4">
+                        <!-- The sticks around the monitors, in the colours they are showing. -->
+                        <Border Padding="8" Style="{StaticResource CardStyle}">
+                            <Canvas
+                                x:Name="PreviewCanvas"
+                                Height="120"
+                                SizeChanged="PreviewCanvas_SizeChanged" />
+                        </Border>
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE7E8;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Lights" />
+                                        <TextBlock x:Name="LightsDescription" Style="{StaticResource CardDescriptionStyle}" />
+                                    </StackPanel>
+                                    <ToggleSwitch
+                                        x:Name="LightsSwitch"
+                                        Grid.Column="2"
+                                        MinWidth="0"
+                                        OffContent=""
+                                        OnContent=""
+                                        Toggled="LightsSwitch_Toggled" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE706;" Style="{StaticResource CardIconStyle}" />
+                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Brightness" />
+                                    <Slider
+                                        x:Name="BrightnessSlider"
+                                        Grid.Column="2"
+                                        Maximum="100"
+                                        Minimum="1"
+                                        Style="{StaticResource CardSliderStyle}"
+                                        ValueChanged="BrightnessSlider_ValueChanged" />
+                                    <TextBlock x:Name="BrightnessValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
+                                </Grid>
                             </StackPanel>
-                            <ComboBox
-                                x:Name="EffectBox"
-                                Grid.Column="2"
-                                MinWidth="140"
-                                VerticalAlignment="Center"
-                                SelectionChanged="EffectBox_SelectionChanged" />
-                        </Grid>
-                    </Border>
-                    <Border x:Name="SpeedCard" Style="{StaticResource CardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <FontIcon Glyph="&#xEC4A;" Style="{StaticResource CardIconStyle}" />
-                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Speed" />
-                            <Slider
-                                x:Name="SpeedSlider"
-                                Grid.Column="2"
-                                Maximum="400"
-                                Minimum="25"
-                                StepFrequency="5"
-                                Style="{StaticResource CardSliderStyle}"
-                                ValueChanged="SpeedSlider_ValueChanged" />
-                            <TextBlock x:Name="SpeedValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
-                        </Grid>
-                    </Border>
-                    <Border x:Name="EffectColourCard" Style="{StaticResource CardStyle}">
-                        <StackPanel Spacing="12">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE790;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Colour" />
-                                    <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Shared with Colour mode" />
-                                </StackPanel>
-                            </Grid>
-                            <StackPanel
-                                x:Name="EffectSwatches"
-                                Margin="36,0,0,0"
-                                Orientation="Horizontal"
-                                Spacing="6" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                        </Border>
+                    </StackPanel>
 
-                <!-- Ambient -->
-                <StackPanel x:Name="AmbientPanel" Spacing="4">
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel Spacing="8">
+                    <!-- Light -->
+                    <StackPanel x:Name="LightPanel" Spacing="4">
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xEA80;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Warmth" />
+                                        <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Lower is warmer, higher is cooler" />
+                                    </StackPanel>
+                                    <Slider
+                                        x:Name="KelvinSlider"
+                                        Grid.Column="2"
+                                        Maximum="6500"
+                                        Minimum="1900"
+                                        StepFrequency="100"
+                                        Style="{StaticResource CardSliderStyle}"
+                                        ValueChanged="KelvinSlider_ValueChanged" />
+                                    <TextBlock x:Name="KelvinValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
+                                </Grid>
+                                <StackPanel
+                                    x:Name="WhitePresets"
+                                    Margin="36,0,0,0"
+                                    Orientation="Horizontal"
+                                    Spacing="8" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Colour -->
+                    <StackPanel x:Name="ColourPanel" Spacing="4">
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE790;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Colour" />
+                                        <TextBlock x:Name="ColourHex" Style="{StaticResource CardDescriptionStyle}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="2" Content="More colours">
+                                        <Button.Flyout>
+                                            <Flyout Opening="ColourFlyout_Opening">
+                                                <ColorPicker
+                                                    x:Name="ColourPicker"
+                                                    ColorChanged="ColourPicker_ColorChanged"
+                                                    ColorSpectrumShape="Ring"
+                                                    IsAlphaEnabled="False"
+                                                    IsColorChannelTextInputVisible="False"
+                                                    IsHexInputVisible="True"
+                                                    IsMoreButtonVisible="False" />
+                                            </Flyout>
+                                        </Button.Flyout>
+                                    </Button>
+                                </Grid>
+                                <StackPanel
+                                    x:Name="ColourSwatches"
+                                    Margin="36,0,0,0"
+                                    Orientation="Horizontal"
+                                    Spacing="6" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Effect -->
+                    <StackPanel x:Name="EffectPanel" Spacing="4">
+                        <Border Style="{StaticResource CardStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE81C;" Style="{StaticResource CardIconStyle}" />
+                                <FontIcon Glyph="&#xE945;" Style="{StaticResource CardIconStyle}" />
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Smoothing" />
-                                    <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="How gently the lights follow the screen" />
+                                    <TextBlock Text="Effect" />
+                                    <TextBlock x:Name="EffectHelp" Style="{StaticResource CardDescriptionStyle}" />
                                 </StackPanel>
-                                <Slider
-                                    x:Name="SmoothingSlider"
+                                <ComboBox
+                                    x:Name="EffectBox"
                                     Grid.Column="2"
-                                    Maximum="200"
-                                    Minimum="0"
-                                    Style="{StaticResource CardSliderStyle}"
-                                    ValueChanged="SmoothingSlider_ValueChanged" />
-                                <TextBlock x:Name="SmoothingValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
+                                    MinWidth="140"
+                                    VerticalAlignment="Center"
+                                    SelectionChanged="EffectBox_SelectionChanged" />
                             </Grid>
+                        </Border>
+                        <Border x:Name="SpeedCard" Style="{StaticResource CardStyle}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -291,329 +226,406 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE790;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Saturation" />
-                                    <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Above 1 makes up for edges averaging to grey" />
-                                </StackPanel>
+                                <FontIcon Glyph="&#xEC4A;" Style="{StaticResource CardIconStyle}" />
+                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Speed" />
                                 <Slider
-                                    x:Name="SaturationSlider"
-                                    Grid.Column="2"
-                                    Maximum="300"
-                                    Minimum="0"
-                                    StepFrequency="5"
-                                    Style="{StaticResource CardSliderStyle}"
-                                    ValueChanged="SaturationSlider_ValueChanged" />
-                                <TextBlock x:Name="SaturationValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
-                            </Grid>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE793;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Gamma" />
-                                    <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Higher keeps dark scenes dark" />
-                                </StackPanel>
-                                <Slider
-                                    x:Name="GammaSlider"
+                                    x:Name="SpeedSlider"
                                     Grid.Column="2"
                                     Maximum="400"
-                                    Minimum="50"
+                                    Minimum="25"
                                     StepFrequency="5"
                                     Style="{StaticResource CardSliderStyle}"
-                                    ValueChanged="GammaSlider_ValueChanged" />
-                                <TextBlock x:Name="GammaValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
+                                    ValueChanged="SpeedSlider_ValueChanged" />
+                                <TextBlock x:Name="SpeedValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
                             </Grid>
-                            <HyperlinkButton
-                                Margin="24,0,0,0"
-                                Click="AmbientDefaults_Click"
-                                Content="Back to the defaults" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                        </Border>
+                        <Border x:Name="EffectColourCard" Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE790;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Colour" />
+                                        <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Shared with Colour mode" />
+                                    </StackPanel>
+                                </Grid>
+                                <StackPanel
+                                    x:Name="EffectSwatches"
+                                    Margin="36,0,0,0"
+                                    Orientation="Horizontal"
+                                    Spacing="6" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
 
-                <!-- Settings, behind the cog. -->
-                <StackPanel x:Name="SettingsPanel" Spacing="4">
-                    <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Startup" />
-                    <Border Style="{StaticResource CardStyle}">
+                    <!-- Ambient -->
+                    <StackPanel x:Name="AmbientPanel" Spacing="4">
+                        <Border Style="{StaticResource CardStyle}">
+                            <StackPanel Spacing="8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE81C;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Smoothing" />
+                                        <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="How gently the lights follow the screen" />
+                                    </StackPanel>
+                                    <Slider
+                                        x:Name="SmoothingSlider"
+                                        Grid.Column="2"
+                                        Maximum="200"
+                                        Minimum="0"
+                                        Style="{StaticResource CardSliderStyle}"
+                                        ValueChanged="SmoothingSlider_ValueChanged" />
+                                    <TextBlock x:Name="SmoothingValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE790;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Saturation" />
+                                        <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Above 1 makes up for edges averaging to grey" />
+                                    </StackPanel>
+                                    <Slider
+                                        x:Name="SaturationSlider"
+                                        Grid.Column="2"
+                                        Maximum="300"
+                                        Minimum="0"
+                                        StepFrequency="5"
+                                        Style="{StaticResource CardSliderStyle}"
+                                        ValueChanged="SaturationSlider_ValueChanged" />
+                                    <TextBlock x:Name="SaturationValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE793;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Gamma" />
+                                        <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Higher keeps dark scenes dark" />
+                                    </StackPanel>
+                                    <Slider
+                                        x:Name="GammaSlider"
+                                        Grid.Column="2"
+                                        Maximum="400"
+                                        Minimum="50"
+                                        StepFrequency="5"
+                                        Style="{StaticResource CardSliderStyle}"
+                                        ValueChanged="GammaSlider_ValueChanged" />
+                                    <TextBlock x:Name="GammaValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
+                                </Grid>
+                                <HyperlinkButton
+                                    Margin="24,0,0,0"
+                                    Click="AmbientDefaults_Click"
+                                    Content="Back to the defaults" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Settings, behind the cog, in two columns. -->
+                    <Grid x:Name="SettingsPanel" ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
                         <StackPanel Spacing="4">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE7E8;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Start with Windows" />
-                                    <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="When you sign in" />
+                            <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Startup" />
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="4">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE7E8;" Style="{StaticResource CardIconStyle}" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Start with Windows" />
+                                            <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="When you sign in" />
+                                        </StackPanel>
+                                        <ToggleSwitch
+                                            x:Name="StartWithWindowsSwitch"
+                                            Grid.Column="2"
+                                            MinWidth="0"
+                                            OffContent=""
+                                            OnContent=""
+                                            Toggled="StartWithWindowsSwitch_Toggled" />
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE921;" Style="{StaticResource CardIconStyle}" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Start minimised" />
+                                            <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Start in the tray, without this window" />
+                                        </StackPanel>
+                                        <ToggleSwitch
+                                            x:Name="StartMinimisedSwitch"
+                                            Grid.Column="2"
+                                            MinWidth="0"
+                                            OffContent=""
+                                            OnContent=""
+                                            Toggled="StartMinimisedSwitch_Toggled" />
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE73F;" Style="{StaticResource CardIconStyle}" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Minimise to tray" />
+                                            <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Minimising or closing this window keeps AmbiMote running in the tray" />
+                                        </StackPanel>
+                                        <ToggleSwitch
+                                            x:Name="MinimiseToTraySwitch"
+                                            Grid.Column="2"
+                                            MinWidth="0"
+                                            OffContent=""
+                                            OnContent=""
+                                            Toggled="MinimiseToTraySwitch_Toggled" />
+                                    </Grid>
                                 </StackPanel>
-                                <ToggleSwitch
-                                    x:Name="StartWithWindowsSwitch"
-                                    Grid.Column="2"
-                                    MinWidth="0"
-                                    OffContent=""
-                                    OnContent=""
-                                    Toggled="StartWithWindowsSwitch_Toggled" />
-                            </Grid>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE921;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Start minimised" />
-                                    <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Start in the tray, without this window" />
-                                </StackPanel>
-                                <ToggleSwitch
-                                    x:Name="StartMinimisedSwitch"
-                                    Grid.Column="2"
-                                    MinWidth="0"
-                                    OffContent=""
-                                    OnContent=""
-                                    Toggled="StartMinimisedSwitch_Toggled" />
-                            </Grid>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE73F;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Minimise to tray" />
-                                    <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Minimising or closing this window keeps AmbiMote running in the tray" />
-                                </StackPanel>
-                                <ToggleSwitch
-                                    x:Name="MinimiseToTraySwitch"
-                                    Grid.Column="2"
-                                    MinWidth="0"
-                                    OffContent=""
-                                    OnContent=""
-                                    Toggled="MinimiseToTraySwitch_Toggled" />
-                            </Grid>
+                            </Border>
+
+                            <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Sticks" />
+                            <Border Style="{StaticResource CardStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE945;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Power limit" />
+                                        <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Per Mote host. Above 500 mA, use a powered USB hub." />
+                                    </StackPanel>
+                                    <Slider
+                                        x:Name="PowerSlider"
+                                        Grid.Column="2"
+                                        Width="140"
+                                        Maximum="1500"
+                                        Minimum="100"
+                                        StepFrequency="50"
+                                        Style="{StaticResource CardSliderStyle}"
+                                        ValueChanged="PowerSlider_ValueChanged" />
+                                    <TextBlock x:Name="PowerValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
+                                </Grid>
+                            </Border>
+                            <Border Style="{StaticResource CardStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE708;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Off while away" />
+                                        <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Turn the lights off while the PC is locked or the screens are off" />
+                                    </StackPanel>
+                                    <ToggleSwitch
+                                        x:Name="PauseWhenAwaySwitch"
+                                        Grid.Column="2"
+                                        MinWidth="0"
+                                        OffContent=""
+                                        OnContent=""
+                                        Toggled="PauseWhenAwaySwitch_Toggled" />
+                                </Grid>
+                            </Border>
+                            <Border Style="{StaticResource CardStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE7B3;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Identify sticks" />
+                                        <TextBlock
+                                            Style="{StaticResource CardDescriptionStyle}"
+                                            Text="Lights each stick in turn for 3 seconds, with its white end at pixel 0. The status bar says which it is."
+                                            TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Button
+                                        x:Name="IdentifyButton"
+                                        Grid.Column="2"
+                                        MinWidth="80"
+                                        Margin="12,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Click="IdentifyButton_Click"
+                                        Content="Identify" />
+                                </Grid>
+                            </Border>
+                            <Border Style="{StaticResource CardStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon Glyph="&#xE7F4;" Style="{StaticResource CardIconStyle}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="Stick mapping" />
+                                        <TextBlock
+                                            x:Name="ConfigPath"
+                                            IsTextSelectionEnabled="True"
+                                            Style="{StaticResource CardDescriptionStyle}" />
+                                    </StackPanel>
+                                    <StackPanel
+                                        Grid.Column="2"
+                                        VerticalAlignment="Center"
+                                        Orientation="Horizontal"
+                                        Spacing="8">
+                                        <Button Click="OpenConfigFolder_Click" Content="Open folder" />
+                                        <Button Click="Reconnect_Click" Content="Reconnect" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="About" />
+                            <Border Style="{StaticResource CardStyle}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Image
+                                        x:Name="AboutIcon"
+                                        Width="32"
+                                        Height="32"
+                                        Margin="0,0,12,0" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock x:Name="AboutVersion" />
+                                        <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Ambient lighting with Pimoroni Mote sticks. Earthstorm Software, MIT licence." />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                         </StackPanel>
-                    </Border>
 
-                    <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Sticks" />
-                    <Border Style="{StaticResource CardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <FontIcon Glyph="&#xE945;" Style="{StaticResource CardIconStyle}" />
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Power limit" />
-                                <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Per Mote host. Above 500 mA, use a powered USB hub." />
-                            </StackPanel>
-                            <Slider
-                                x:Name="PowerSlider"
-                                Grid.Column="2"
-                                Maximum="1500"
-                                Minimum="100"
-                                StepFrequency="50"
-                                Style="{StaticResource CardSliderStyle}"
-                                ValueChanged="PowerSlider_ValueChanged" />
-                            <TextBlock x:Name="PowerValue" Grid.Column="3" Style="{StaticResource CardValueStyle}" />
-                        </Grid>
-                    </Border>
-                    <Border Style="{StaticResource CardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <FontIcon Glyph="&#xE708;" Style="{StaticResource CardIconStyle}" />
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Off while away" />
-                                <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Turn the lights off while the PC is locked or the screens are off" />
-                            </StackPanel>
-                            <ToggleSwitch
-                                x:Name="PauseWhenAwaySwitch"
-                                Grid.Column="2"
-                                MinWidth="0"
-                                OffContent=""
-                                OnContent=""
-                                Toggled="PauseWhenAwaySwitch_Toggled" />
-                        </Grid>
-                    </Border>
-                    <Border Style="{StaticResource CardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <FontIcon Glyph="&#xE7B3;" Style="{StaticResource CardIconStyle}" />
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Identify sticks" />
-                                <TextBlock
-                                    Style="{StaticResource CardDescriptionStyle}"
-                                    Text="Lights each stick in turn for 3 seconds, with its white end at pixel 0. The status bar says which it is."
-                                    TextWrapping="Wrap" />
-                            </StackPanel>
-                            <Button
-                                x:Name="IdentifyButton"
-                                Grid.Column="2"
-                                MinWidth="80"
-                                Margin="12,0,0,0"
-                                VerticalAlignment="Center"
-                                Click="IdentifyButton_Click"
-                                Content="Identify" />
-                        </Grid>
-                    </Border>
-                    <Border Style="{StaticResource CardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <FontIcon Glyph="&#xE7F4;" Style="{StaticResource CardIconStyle}" />
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock Text="Stick mapping" />
-                                <TextBlock
-                                    x:Name="ConfigPath"
-                                    IsTextSelectionEnabled="True"
-                                    Style="{StaticResource CardDescriptionStyle}" />
-                            </StackPanel>
-                            <StackPanel
-                                Grid.Column="2"
-                                VerticalAlignment="Center"
-                                Orientation="Horizontal"
-                                Spacing="8">
-                                <Button Click="OpenConfigFolder_Click" Content="Open folder" />
-                                <Button Click="Reconnect_Click" Content="Reconnect" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
-                    <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Automatic mode" />
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel Spacing="8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE740;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Full screen" />
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Automatic mode" />
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE740;" Style="{StaticResource CardIconStyle}" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Full screen" />
+                                            <TextBlock
+                                                Style="{StaticResource CardDescriptionStyle}"
+                                                Text="While a game or video fills the screen and is in front"
+                                                TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <ComboBox
+                                            x:Name="FullScreenModeBox"
+                                            Grid.Column="2"
+                                            MinWidth="150"
+                                            Margin="12,0,0,0"
+                                            VerticalAlignment="Center"
+                                            SelectionChanged="FullScreenModeBox_SelectionChanged" />
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE71D;" Style="{StaticResource CardIconStyle}" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Programs" />
+                                            <TextBlock
+                                                Style="{StaticResource CardDescriptionStyle}"
+                                                Text="A mode of their own while they are in front, full screen or not"
+                                                TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <StackPanel x:Name="AppRuleRows" Margin="36,0,0,0" Spacing="4" />
+                                    <Grid Margin="36,0,0,0" ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox
+                                            x:Name="AddAppBox"
+                                            HorizontalAlignment="Stretch"
+                                            DropDownOpened="AddAppBox_DropDownOpened"
+                                            IsEditable="True"
+                                            PlaceholderText="Program, such as game.exe" />
+                                        <Button Grid.Column="1" Click="AddApp_Click" Content="Add" />
+                                    </Grid>
                                     <TextBlock
+                                        Margin="36,0,0,0"
                                         Style="{StaticResource CardDescriptionStyle}"
-                                        Text="While a game or video fills the screen and is in front"
+                                        Text="The mode goes back afterwards, unless you change it meanwhile. Lights you turned off stay off."
                                         TextWrapping="Wrap" />
                                 </StackPanel>
-                                <ComboBox
-                                    x:Name="FullScreenModeBox"
-                                    Grid.Column="2"
-                                    MinWidth="150"
-                                    Margin="12,0,0,0"
-                                    VerticalAlignment="Center"
-                                    SelectionChanged="FullScreenModeBox_SelectionChanged" />
-                            </Grid>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE71D;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Programs" />
+                            </Border>
+
+                            <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Keyboard shortcuts" />
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel Spacing="8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <FontIcon Glyph="&#xE765;" Style="{StaticResource CardIconStyle}" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="Shortcuts" />
+                                            <TextBlock
+                                                Style="{StaticResource CardDescriptionStyle}"
+                                                Text="Work anywhere, even in games. Click one and press the new keys; Backspace clears it, Esc keeps it."
+                                                TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <ToggleSwitch
+                                            x:Name="HotkeysSwitch"
+                                            Grid.Column="2"
+                                            MinWidth="0"
+                                            OffContent=""
+                                            OnContent=""
+                                            Toggled="HotkeysSwitch_Toggled" />
+                                    </Grid>
+                                    <StackPanel x:Name="HotkeyRows" Margin="36,0,0,0" Spacing="4" />
                                     <TextBlock
+                                        x:Name="HotkeyProblems"
+                                        Margin="36,0,0,0"
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
                                         Style="{StaticResource CardDescriptionStyle}"
-                                        Text="A mode of their own while they are in front, full screen or not"
                                         TextWrapping="Wrap" />
                                 </StackPanel>
-                            </Grid>
-                            <StackPanel x:Name="AppRuleRows" Margin="36,0,0,0" Spacing="4" />
-                            <Grid Margin="36,0,0,0" ColumnSpacing="8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ComboBox
-                                    x:Name="AddAppBox"
-                                    HorizontalAlignment="Stretch"
-                                    DropDownOpened="AddAppBox_DropDownOpened"
-                                    IsEditable="True"
-                                    PlaceholderText="Program, such as game.exe" />
-                                <Button Grid.Column="1" Click="AddApp_Click" Content="Add" />
-                            </Grid>
-                            <TextBlock
-                                Margin="36,0,0,0"
-                                Style="{StaticResource CardDescriptionStyle}"
-                                Text="The mode goes back afterwards, unless you change it meanwhile. Lights you turned off stay off."
-                                TextWrapping="Wrap" />
+                            </Border>
                         </StackPanel>
-                    </Border>
-
-                    <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="Keyboard shortcuts" />
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel Spacing="8">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon Glyph="&#xE765;" Style="{StaticResource CardIconStyle}" />
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                    <TextBlock Text="Shortcuts" />
-                                    <TextBlock
-                                        Style="{StaticResource CardDescriptionStyle}"
-                                        Text="Work anywhere, even in games. Click one and press the new keys; Backspace clears it, Esc keeps it."
-                                        TextWrapping="Wrap" />
-                                </StackPanel>
-                                <ToggleSwitch
-                                    x:Name="HotkeysSwitch"
-                                    Grid.Column="2"
-                                    MinWidth="0"
-                                    OffContent=""
-                                    OnContent=""
-                                    Toggled="HotkeysSwitch_Toggled" />
-                            </Grid>
-                            <StackPanel x:Name="HotkeyRows" Margin="36,0,0,0" Spacing="4" />
-                            <TextBlock
-                                x:Name="HotkeyProblems"
-                                Margin="36,0,0,0"
-                                Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                Style="{StaticResource CardDescriptionStyle}"
-                                TextWrapping="Wrap" />
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="About" />
-                    <Border Style="{StaticResource CardStyle}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Image
-                                x:Name="AboutIcon"
-                                Width="32"
-                                Height="32"
-                                Margin="0,0,12,0" />
-                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                <TextBlock x:Name="AboutVersion" />
-                                <TextBlock Style="{StaticResource CardDescriptionStyle}" Text="Ambient lighting with Pimoroni Mote sticks. Earthstorm Software, MIT licence." />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
+                    </Grid>
                 </StackPanel>
-            </StackPanel>
+            </ScrollViewer>
         </NavigationView>
 
         <!-- The status bar: what the sticks are doing, any problems, and Reconnect. -->
