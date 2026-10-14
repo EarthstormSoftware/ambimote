@@ -9,9 +9,8 @@
 3. **Stick mapping and lamp mode** *(done)*: record where each stick is mounted and which way round, then
    use the sticks as ordinary lights, like Pimoroni Plasma: any colour, plus an effect or two
    (a chase around the monitors in order, which also checks the mapping, and a rainbow).
-4. **All monitors and sticks**: per-monitor capture driven by the stick mapping and smoothing
-   (`ambimote ambient`, done); still to do:
-   gamma and white balance.
+4. **All monitors and sticks**: per-monitor capture driven by the stick mapping, smoothing,
+   saturation and gamma (`ambimote ambient`, done); still to do: white balance.
 5. **Measure while gaming**: CPU use and frame times with AmbiMote on and off (PresentMon or the
    GPU vendor's overlay).
 6. **Desktop app**: tray icon and menu, mode and settings window, start with Windows, start minimised,
