@@ -443,6 +443,33 @@ public class LightingEngineTests
     }
 
     [Fact]
+    public void WaitUntilPaused_IsTrueOnlyOnceTheSticksAreOff()
+    {
+        var (engine, hardware) = Create(new LightingSettings { Mode = LightingMode.Colour, Colour = new Rgb(9, 9, 9) }, "COM5");
+        engine.Tick(0);
+
+        Assert.False(engine.WaitUntilPaused(TimeSpan.Zero));
+
+        engine.Paused = true;
+
+        Assert.False(engine.WaitUntilPaused(TimeSpan.Zero));
+
+        engine.Tick(1);
+
+        Assert.True(engine.WaitUntilPaused(TimeSpan.Zero));
+        Assert.Equal(Rgb.Black, hardware.Opened["COM5"].Host.GetPixels(1)[0]);
+
+        engine.Paused = false;
+        engine.Tick(2);
+
+        Assert.False(engine.WaitUntilPaused(TimeSpan.Zero));
+
+        engine.Paused = true;
+
+        Assert.False(engine.WaitUntilPaused(TimeSpan.Zero));
+    }
+
+    [Fact]
     public void Paused_StopsIdentifying()
     {
         var (engine, _) = Create(new LightingSettings { Mode = LightingMode.Colour }, "COM5");

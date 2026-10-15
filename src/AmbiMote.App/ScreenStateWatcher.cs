@@ -3,15 +3,18 @@ using System.Runtime.InteropServices;
 namespace AmbiMote.App;
 
 /// <summary>
-/// Watches for the PC being locked and the screens turning off, through a hidden window on the UI thread that Windows
-/// sends both notifications to. <see cref="Changed"/> is raised on the UI thread.
+/// Watches for the PC being locked, the screens turning off, the PC going to sleep and Windows ending the session,
+/// through a hidden window on the UI thread that Windows sends these notifications to. <see cref="Changed"/> and
+/// <see cref="SessionEnding"/> are raised on the UI thread.
 /// </summary>
 internal sealed unsafe partial class ScreenStateWatcher : IDisposable
 {
     private const uint WM_WTSSESSION_CHANGE = 0x02B1;
     private const uint WM_POWERBROADCAST = 0x0218;
+    private const uint WM_ENDSESSION = 0x0016;
     private const nint WTS_SESSION_LOCK = 0x7, WTS_SESSION_UNLOCK = 0x8;
     private const nint PBT_POWERSETTINGCHANGE = 0x8013;
+    private const nint PBT_APMSUSPEND = 0x4, PBT_APMRESUMESUSPEND = 0x7, PBT_APMRESUMEAUTOMATIC = 0x12;
     private const uint NOTIFY_FOR_THIS_SESSION = 0;
     private const uint DEVICE_NOTIFY_WINDOW_HANDLE = 0;
 
@@ -33,8 +36,13 @@ internal sealed unsafe partial class ScreenStateWatcher : IDisposable
         _powerNotification = RegisterPowerSettingNotification(_window.Handle, &guid, DEVICE_NOTIFY_WINDOW_HANDLE);
     }
 
-    /// <summary><see cref="IsLocked"/> or <see cref="AreScreensOff"/> changed.</summary>
+    /// <summary><see cref="IsLocked"/>, <see cref="AreScreensOff"/> or <see cref="IsAsleep"/> changed.</summary>
     public event EventHandler? Changed;
+
+    /// <summary>
+    /// Windows is shutting down, restarting or signing out, and may end the process as soon as the handler returns.
+    /// </summary>
+    public event EventHandler? SessionEnding;
 
     /// <summary>
     /// Whether the PC is locked. Assumed not when AmbiMote starts, since it starts when the user signs in.
@@ -43,6 +51,12 @@ internal sealed unsafe partial class ScreenStateWatcher : IDisposable
 
     /// <summary>Whether Windows has turned the screens off. Dimmed counts as on.</summary>
     public bool AreScreensOff { get; private set; }
+
+    /// <summary>
+    /// Whether the PC is going to sleep or hibernate. Windows sleeps as soon as <see cref="Changed"/> returns, so
+    /// anything to do first must be done in the handler.
+    /// </summary>
+    public bool IsAsleep { get; private set; }
 
     public void Dispose()
     {
@@ -69,8 +83,20 @@ internal sealed unsafe partial class ScreenStateWatcher : IDisposable
     {
         if (message == WM_WTSSESSION_CHANGE && wParam is WTS_SESSION_LOCK or WTS_SESSION_UNLOCK)
         {
-            Set(locked: wParam == WTS_SESSION_LOCK, screensOff: AreScreensOff);
+            Set(locked: wParam == WTS_SESSION_LOCK, screensOff: AreScreensOff, asleep: IsAsleep);
             return 0;
+        }
+
+        if (message == WM_ENDSESSION && wParam != 0)
+        {
+            SessionEnding?.Invoke(this, EventArgs.Empty);
+            return 0;
+        }
+
+        if (message == WM_POWERBROADCAST && wParam is PBT_APMSUSPEND or PBT_APMRESUMESUSPEND or PBT_APMRESUMEAUTOMATIC)
+        {
+            Set(locked: IsLocked, screensOff: AreScreensOff, asleep: wParam == PBT_APMSUSPEND);
+            return 1;
         }
 
         if (message == WM_POWERBROADCAST && wParam == PBT_POWERSETTINGCHANGE && lParam != 0)
@@ -79,7 +105,7 @@ internal sealed unsafe partial class ScreenStateWatcher : IDisposable
             if (setting->PowerSetting == s_consoleDisplayState && setting->DataLength >= sizeof(uint))
             {
                 // 0 is off, 1 on and 2 dimmed.
-                Set(locked: IsLocked, screensOff: *(uint*)&setting->Data == 0);
+                Set(locked: IsLocked, screensOff: *(uint*)&setting->Data == 0, asleep: IsAsleep);
             }
 
             return 1;
@@ -88,15 +114,16 @@ internal sealed unsafe partial class ScreenStateWatcher : IDisposable
         return null;
     }
 
-    private void Set(bool locked, bool screensOff)
+    private void Set(bool locked, bool screensOff, bool asleep)
     {
-        if (locked == IsLocked && screensOff == AreScreensOff)
+        if (locked == IsLocked && screensOff == AreScreensOff && asleep == IsAsleep)
         {
             return;
         }
 
         IsLocked = locked;
         AreScreensOff = screensOff;
+        IsAsleep = asleep;
         Changed?.Invoke(this, EventArgs.Empty);
     }
 

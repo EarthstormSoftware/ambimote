@@ -73,6 +73,7 @@ public sealed class LightingEngine : IDisposable
 
     private readonly ILightingHardware _hardware;
     private readonly AutoResetEvent _wake = new(false);
+    private readonly ManualResetEventSlim _pausedOff = new(false);
     private readonly CancellationTokenSource _stop = new();
     private LightingSettings _settings;
     private EngineStatus _status = EngineStatus.Off;
@@ -150,10 +151,21 @@ public sealed class LightingEngine : IDisposable
         get => _paused;
         set
         {
+            if (value != _paused)
+            {
+                _pausedOff.Reset();
+            }
+
             _paused = value;
             _wake.Set();
         }
     }
+
+    /// <summary>
+    /// Waits until the sticks are off for <see cref="Paused"/>, for when the PC is about to sleep and will not wait for
+    /// the next frame. False if they are not off within <paramref name="timeout"/>, or if not paused.
+    /// </summary>
+    public bool WaitUntilPaused(TimeSpan timeout) => _paused && _pausedOff.Wait(timeout);
 
     /// <summary>
     /// Lights every channel of every Mote host in turn for <see cref="IdentifyStepSeconds"/> each, then goes back to
@@ -196,6 +208,7 @@ public sealed class LightingEngine : IDisposable
 
         _stop.Dispose();
         _wake.Dispose();
+        _pausedOff.Dispose();
     }
 
     /// <summary>
@@ -224,6 +237,7 @@ public sealed class LightingEngine : IDisposable
             _identifyRequested = false;
             StopIdentifyingNow();
             TurnOff();
+            _pausedOff.Set();
             SetStatus(EngineStatus.Paused);
             return Timeout.InfiniteTimeSpan;
         }

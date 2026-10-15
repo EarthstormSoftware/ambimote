@@ -57,6 +57,9 @@ public partial class App : Application
         _tray.Clicked += (_, _) => ShowWindow();
         _screens = new ScreenStateWatcher();
         _screens.Changed += (_, _) => UpdatePaused();
+
+        // Many PCs keep USB powered while off, and the Mote hosts keep showing the last frame, so turn them off first.
+        _screens.SessionEnding += (_, _) => Exit();
         _autoMode = new AutoModeWatcher(_store, _screens, _dispatcher);
         _autoMode.Changed += (_, _) =>
         {
@@ -233,9 +236,16 @@ public partial class App : Application
         return _autoMode.FullScreenInCharge ? settings.AutoMode.ForFullScreen(settings.Lighting) : settings.Lighting;
     }
 
-    /// <summary>Lights off while nobody can see the screens, if the user wants that.</summary>
-    private void UpdatePaused() =>
-        _engine.Paused = _store.Current.PauseWhenAway && (_screens.IsLocked || _screens.AreScreensOff);
+    /// <summary>Lights off while the PC sleeps, and while nobody can see the screens if the user wants that.</summary>
+    private void UpdatePaused()
+    {
+        _engine.Paused = _screens.IsAsleep || (_store.Current.PauseWhenAway && (_screens.IsLocked || _screens.AreScreensOff));
+        if (_screens.IsAsleep)
+        {
+            // USB often stays powered while the PC sleeps, and it sleeps as soon as this returns.
+            _engine.WaitUntilPaused(TimeSpan.FromSeconds(2));
+        }
+    }
 
     private void UpdateTray()
     {
